@@ -13,6 +13,17 @@ stellar contract deploy \
   --payer $(stellar keys address alice)
 ```
 
+## Test Hello CMD
+```bash
+stellar contract invoke \
+  --id CCSN3TSGYB2AWBS535AN5CGKUYBFGTAK62GEZL45S3I5JUU556ZWYJDP \
+  --source-account alice \
+  --network testnet \
+  -- \
+  hello \
+  --to Buoya
+```
+
 ## Deployed Address
 
 CCSN3TSGYB2AWBS535AN5CGKUYBFGTAK62GEZL45S3I5JUU556ZWYJDP
