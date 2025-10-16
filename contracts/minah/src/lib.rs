@@ -289,6 +289,59 @@ impl Minah {
         // TODO: emit NFT_MINTED event
     }
 
+    /// Start the chronometer for ROI distribution
+    #[only_owner]
+    pub fn start_chronometer(e: Env) {
+        let countdown_start: bool = e
+            .storage()
+            .instance()
+            .get(&DataKey::CountdownStart)
+            .expect("CountdownStart not set");
+
+        let begin_date: u64 = e
+            .storage()
+            .instance()
+            .get(&DataKey::BeginDate)
+            .expect("BeginDate not set");
+
+        assert!(
+            !countdown_start && begin_date == 0,
+            "CHRONOMETER_ALREADY_STARTED"
+        );
+
+        // Set begin date and countdown
+        e.storage()
+            .instance()
+            .set(&DataKey::BeginDate, &e.ledger().timestamp());
+        e.storage().instance().set(&DataKey::CountdownStart, &true);
+        e.storage()
+            .instance()
+            .set(&DataKey::State, &InvestmentStatus::BeforeFirstRelease);
+
+        // Mint remaining NFTs to owner
+        let current_supply: u32 = e
+            .storage()
+            .instance()
+            .get(&DataKey::CurrentSupply)
+            .expect("CurrentSupply not set");
+
+        let remaining = TOTAL_SUPPLY - current_supply;
+
+        // Update current supply to total supply
+        e.storage()
+            .instance()
+            .set(&DataKey::CurrentSupply, &TOTAL_SUPPLY);
+
+        if remaining > 0 {
+            // Mint the remaining amount of NFTs to the owner
+            let owner = ownable::get_owner(&e).expect("Owner not set");
+
+            for _ in 0..remaining {
+                Base::sequential_mint(&e, &owner);
+            }
+        }
+    }
+
     //////////////////////// Getters ////////////////////////////////
 
     /// Check if an address is an investor
@@ -323,6 +376,22 @@ impl Minah {
             .instance()
             .get(&DataKey::Receiver)
             .expect("Receiver not set")
+    }
+
+    /// Returns the start time of the chronometer.
+    pub fn get_begin_date(e: &Env) -> u64 {
+        e.storage()
+            .instance()
+            .get(&DataKey::BeginDate)
+            .expect("BeginDate not set")
+    }
+
+    /// Returns whether the chronometer has started.
+    pub fn is_chronometer_started(e: &Env) -> bool {
+        e.storage()
+            .instance()
+            .get(&DataKey::CountdownStart)
+            .expect("CountdownStart not set")
     }
 
     /// Returns the address of the payer.

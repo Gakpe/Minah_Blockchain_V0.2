@@ -112,3 +112,27 @@ fn test_double_investor_creation() {
     // Attempt to create the same investor again, which should panic
     client.create_investor(&new_investor);
 }
+
+#[test]
+fn test_start_chronometer() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let (client, _owner) = create_client(&env, USDC_ADDRESS, &receiver, &payer);
+
+    // Initially, the chronometer should not be started
+    let is_started = client.is_chronometer_started();
+    assert!(!is_started);
+
+    // Start the chronometer
+    client.start_chronometer();
+
+    // Verify that the chronometer has been started
+    let is_started = client.is_chronometer_started();
+    assert!(is_started);
+
+    // Verify that the start time is set to the current ledger timestamp
+    let start_time = client.get_begin_date();
+    let current_time = env.ledger().timestamp();
+    assert_eq!(start_time, current_time);
+}
