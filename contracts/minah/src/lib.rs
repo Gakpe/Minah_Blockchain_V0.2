@@ -1,5 +1,7 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Symbol, Vec};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, log, token, vec, Address, Env, String, Symbol, Vec,
+};
 use stellar_access::ownable::{self as ownable, Ownable};
 use stellar_macros::{default_impl, only_owner};
 use stellar_tokens::non_fungible::{Base, NonFungibleToken};
@@ -42,9 +44,9 @@ pub struct Config {
     pub stablecoin: Address,
     pub receiver: Address,
     pub payer: Address,
-    pub current_supply: u128,
+    pub current_supply: i128,
     pub begin_date: u64,
-    pub current_stage_release: u128,
+    pub current_stage_release: i128,
     pub countdown_start: bool,
     pub state: InvestmentStatus,
 }
@@ -60,9 +62,10 @@ fn emit_investor_created_event(e: &Env, investor: Address) {
 pub struct Minah;
 
 // Constants
-const ITEM_ID: u128 = 0;
-const TOTAL_SUPPLY: u128 = 4500;
-const PRICE: u128 = 455;
+const ITEM_ID: i128 = 0;
+const TOTAL_SUPPLY: u32 = 4500;
+const PRICE: i128 = 455;
+const STABLECOIN_SCALE: u32 = 10u32.pow(6); // USDC has 6 decimals
 
 // Distribution intervals in seconds
 const DISTRIBUTION_INTERVALS: [u64; 10] = [
@@ -78,7 +81,7 @@ const DISTRIBUTION_INTERVALS: [u64; 10] = [
     600, // 10 minutes
 ];
 
-const ROI_PERCENTAGES: [u128; 10] = [8, 8, 8, 8, 8, 8, 8, 8, 8, 108];
+const ROI_PERCENTAGES: [i128; 10] = [8, 8, 8, 8, 8, 8, 8, 8, 8, 108];
 
 #[contractimpl]
 impl Minah {
@@ -105,7 +108,7 @@ impl Minah {
             .set(&DataKey::StableCoin, &stablecoin);
         e.storage().instance().set(&DataKey::Receiver, &receiver);
         e.storage().instance().set(&DataKey::Payer, &payer);
-        e.storage().instance().set(&DataKey::CurrentSupply, &0u128);
+        e.storage().instance().set(&DataKey::CurrentSupply, &0u32);
         e.storage().instance().set(&DataKey::BeginDate, &0u64);
         e.storage()
             .instance()
@@ -161,19 +164,129 @@ impl Minah {
             .set(&DataKey::InvestorsArray, &investors);
 
         // Initialize claimed amount to 0
-        e.storage().instance().set(
-            &DataKey::ClaimedAmount(new_investor.clone()),
-            &0u128,
-        );
+        e.storage()
+            .instance()
+            .set(&DataKey::ClaimedAmount(new_investor.clone()), &0i128);
 
         // Emit INVESTOR_CREATED event
         emit_investor_created_event(&e, new_investor);
     }
 
     /// Mints a new NFT to the specified address.
-    /// TODO: Add payment verification logic.
-    pub fn mint(e: &Env, to: Address, _amount: u128) {
-        Base::sequential_mint(e, &to);
+    pub fn mint(e: Env, user: Address, amount: u32) {
+        // User should authorize this call
+        user.require_auth();
+
+        log!(&e, "Minting {} NFTs to {}", amount, user);
+
+        // CHECK: Amount should be >= 40
+        assert!(amount >= 40, "MINIMUM_INVESTMENT_NOT_MET");
+
+        // CHECK: Current state should be BuyingPhase
+        let current_state: InvestmentStatus = e
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set");
+
+        assert!(
+            current_state == InvestmentStatus::BuyingPhase,
+            "INVESTMENT_NOT_IN_BUYING_PHASE"
+        );
+
+        // CHECK: User should be an investor
+        let is_investor = e
+            .storage()
+            .instance()
+            .get(&DataKey::Investor(user.clone()))
+            .unwrap_or(false);
+
+        assert!(is_investor, "USER_NOT_AN_INVESTOR");
+
+        // CHECK: Total supply should not be exceeded
+        let current_supply: u32 = e
+            .storage()
+            .instance()
+            .get(&DataKey::CurrentSupply)
+            .unwrap_or(0);
+
+        let new_supply = current_supply + amount;
+
+        assert!(new_supply <= TOTAL_SUPPLY, "MAXIMUM_SUPPLY_EXCEEDED");
+
+        // CHECK: Investor NFTS should not exceed 150
+        let investor_balance = Self::balance(&e, user.clone());
+
+        assert!(
+            investor_balance + amount <= 150,
+            "MAXIMUM_NFTS_PER_INVESTOR_EXCEEDED"
+        );
+
+        log!(
+            &e,
+            "Current supply: {}, New supply: {}",
+            current_supply,
+            new_supply
+        );
+
+        let usd_amount = PRICE * amount as i128 * STABLECOIN_SCALE as i128;
+
+        // CHECK: User has enough balance of stablecoin
+        let stablecoin_address: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::StableCoin)
+            .expect("Stablecoin not set");
+
+        log!(&e, "Using stablecoin at address: {}", stablecoin_address);
+
+        let stablecoin_client = token::Client::new(&e, &stablecoin_address);
+
+        log!(
+            &e,
+            "Stablecoin client created for address: {}",
+            stablecoin_address
+        );
+
+        let user_balance = stablecoin_client.balance(&user);
+
+        log!(
+            &e,
+            "User balance: {}, Required amount: {}",
+            user_balance,
+            usd_amount
+        );
+
+        assert!(user_balance >= usd_amount, "INSUFFICIENT_BALANCE");
+
+        // CHECK: User has enough balance of stablecoin
+        let current_address = e.current_contract_address();
+
+        let user_allowance = stablecoin_client.allowance(&user, &current_address);
+
+        assert!(user_allowance >= usd_amount, "INSUFFICIENT_ALLOWANCE");
+
+        let receiver: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::Receiver)
+            .expect("Receiver not set");
+
+        // Do the transfer of stablecoin from user to the receiver address
+        stablecoin_client.transfer_from(&user, &user, &receiver, &usd_amount);
+
+        // Update current supply to new supply
+        e.storage()
+            .instance()
+            .set(&DataKey::CurrentSupply, &new_supply);
+
+        // Mint the requested amount of NFTs to the specified address
+        for _ in 0..amount {
+            // Mint the NFT
+            Base::sequential_mint(&e, &user);
+        }
+
+        // TODO: emit NFT_MINTED event
     }
 
     //////////////////////// Getters ////////////////////////////////
@@ -221,7 +334,7 @@ impl Minah {
     }
 
     /// Get claimed amount for an investor
-    pub fn see_claimed_amount(e: Env, investor: Address) -> u128 {
+    pub fn see_claimed_amount(e: Env, investor: Address) -> i128 {
         e.storage()
             .instance()
             .get(&DataKey::ClaimedAmount(investor))
@@ -229,7 +342,7 @@ impl Minah {
     }
 
     /// Get current supply
-    pub fn get_current_supply(e: Env) -> u128 {
+    pub fn get_current_supply(e: Env) -> i128 {
         e.storage()
             .instance()
             .get(&DataKey::CurrentSupply)
