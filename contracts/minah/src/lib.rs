@@ -1,5 +1,5 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Vec, U256};
 use stellar_access::ownable::{self as ownable, Ownable};
 use stellar_macros::{default_impl, only_owner};
 use stellar_tokens::non_fungible::{Base, NonFungibleToken};
@@ -114,14 +114,6 @@ impl Minah {
             .set(&DataKey::InvestorsArray, &empty_investors);
     }
 
-    /// Returns the address of the stablecoin used for investments.
-    pub fn get_stablecoin(e: &Env) -> Address {
-        e.storage()
-            .instance()
-            .get(&DataKey::StableCoin)
-            .expect("Stablecoin not set")
-    }
-
     /// Sets a new stablecoin address. Only the contract owner can call this function.
     #[only_owner]
     pub fn set_stablecoin(e: &Env, stablecoin: Address) {
@@ -130,6 +122,23 @@ impl Minah {
             .set(&DataKey::StableCoin, &stablecoin);
     }
 
+    /// Mints a new NFT to the specified address.
+    /// TODO: Add payment verification logic.
+    pub fn mint(e: &Env, to: Address, amount: U256) {
+        Base::sequential_mint(e, &to);
+    }
+
+    //////////////////////// Getters ////////////////////////////////
+
+    /// Returns the address of the stablecoin used for investments.
+    pub fn get_stablecoin(e: &Env) -> Address {
+        e.storage()
+            .instance()
+            .get(&DataKey::StableCoin)
+            .expect("Stablecoin not set")
+    }
+
+    /// Returns the address of the receiver.
     pub fn get_receiver(e: &Env) -> Address {
         e.storage()
             .instance()
@@ -137,6 +146,7 @@ impl Minah {
             .expect("Receiver not set")
     }
 
+    /// Returns the address of the payer.
     pub fn get_payer(e: &Env) -> Address {
         e.storage()
             .instance()
@@ -161,6 +171,12 @@ impl Minah {
     pub fn hello(env: Env, to: String) -> Vec<String> {
         vec![&env, String::from_str(&env, "Hello"), to]
     }
+}
+
+#[default_impl]
+#[contractimpl]
+impl NonFungibleToken for Minah {
+    type ContractType = Base;
 }
 
 #[default_impl]
