@@ -342,6 +342,175 @@ impl Minah {
         }
     }
 
+    /// Calculate amount to release for a given percentage
+    /// Function to know how much to approve() on the STABLECOIN smart contract before releasing the amount to all investors.
+    /// Arguments:
+    /// * `percentage`: the percentage of ROI to be released for the current stage.
+    pub fn calculate_amount_to_release(e: Env, percent: i128) -> i128 {
+        let investors: Vec<Address> = e
+            .storage()
+            .instance()
+            .get(&DataKey::InvestorsArray)
+            .expect("InvestorsArray not set");
+
+        let mut amount_to_release: i128 = 0;
+        let scaled_percent = percent * 1_000_000;
+
+        for i in 0..investors.len() {
+            let investor = investors.get(i).expect("Investor not found");
+            let balance = Base::balance(&e, &investor) as i128;
+            let investor_amount = ((balance * scaled_percent) / 100i128) * PRICE;
+
+            amount_to_release += investor_amount;
+        }
+
+        amount_to_release
+    }
+
+    /// Releases the distribution for the current stage.
+    /// This function needs to be called by the owner at the end of every distribution period/stage to trigger the current release and next stage.
+    #[only_owner]
+    pub fn release_distribution(e: &Env) {
+        // CHECK: Countdown should be started
+        let countdown_start: bool = e
+            .storage()
+            .instance()
+            .get(&DataKey::CountdownStart)
+            .expect("CountdownStart not set");
+
+        assert!(countdown_start, "COUNDOWN_NOT_STARTED");
+
+        let begin_date: u64 = e
+            .storage()
+            .instance()
+            .get(&DataKey::BeginDate)
+            .expect("BeginDate not set");
+
+        let elapsed = e.ledger().timestamp() - begin_date;
+
+        let mut state: InvestmentStatus = e
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set");
+
+        let mut current_stage_index = (state as u32) - 1;
+        let mut distributed = false;
+
+        while (current_stage_index as usize) < DISTRIBUTION_INTERVALS.len()
+            && elapsed >= DISTRIBUTION_INTERVALS[current_stage_index as usize]
+        {
+            // Distribute for this stage
+            Self::distribute(&e, ROI_PERCENTAGES[current_stage_index as usize]);
+
+            // Update state
+            state = match state {
+                InvestmentStatus::BeforeFirstRelease => InvestmentStatus::SixMonthsDone,
+                InvestmentStatus::SixMonthsDone => InvestmentStatus::TenMonthsDone,
+                InvestmentStatus::TenMonthsDone => InvestmentStatus::OneYearTwoMonthsDone,
+                InvestmentStatus::OneYearTwoMonthsDone => InvestmentStatus::OneYearSixMonthsDone,
+                InvestmentStatus::OneYearSixMonthsDone => InvestmentStatus::OneYearTenMonthsDone,
+                InvestmentStatus::OneYearTenMonthsDone => InvestmentStatus::TwoYearsTwoMonthsDone,
+                InvestmentStatus::TwoYearsTwoMonthsDone => InvestmentStatus::TwoYearsSixMonthsDone,
+                InvestmentStatus::TwoYearsSixMonthsDone => InvestmentStatus::TwoYearsTenMonthsDone,
+                InvestmentStatus::TwoYearsTenMonthsDone => {
+                    InvestmentStatus::ThreeYearsTwoMonthsDone
+                }
+                InvestmentStatus::ThreeYearsTwoMonthsDone => {
+                    InvestmentStatus::ThreeYearsSixMonthsDone
+                }
+                InvestmentStatus::ThreeYearsSixMonthsDone => InvestmentStatus::Ended,
+                _ => InvestmentStatus::Ended,
+            };
+
+            e.storage().instance().set(&DataKey::State, &state);
+
+            // Saturate to avoid overflow(If the calculation overflows the min value of the type, it will be set to the min value)
+            current_stage_index = (state as u32).saturating_sub(1);
+            distributed = true;
+
+            if state == InvestmentStatus::ThreeYearsSixMonthsDone {
+                e.storage()
+                    .instance()
+                    .set(&DataKey::State, &InvestmentStatus::Ended);
+                break;
+            }
+        }
+
+        assert!(distributed, "DISTRIBUTION_NOT_READY_YET");
+    }
+
+    /// Internal distribution function
+    /// The function called from releaseDistribution() and used to distribute to investors what they earned during the current period/stage.
+    /// Arguments:
+    /// * `percent`: the percentage of ROI to be released for the current stage.
+    fn distribute(e: &Env, percent: i128) {
+        // CHECK: State should not be Ended
+        let state: InvestmentStatus = e
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set");
+
+        assert!(
+            state != InvestmentStatus::Ended,
+            "DISTRIBUTION_ALREADY_ENDED"
+        );
+
+        // CALCULATE amount to release for the current stage
+        let amount_to_release = Self::calculate_amount_to_release(e.clone(), percent);
+        e.storage()
+            .instance()
+            .set(&DataKey::AmountToReleaseForCurrentStage, &amount_to_release);
+
+        let stablecoin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::StableCoin)
+            .expect("Stablecoin not set");
+        let payer: Address = e.storage().instance().get(&DataKey::Payer).unwrap();
+        let investors: Vec<Address> = e
+            .storage()
+            .instance()
+            .get(&DataKey::InvestorsArray)
+            .expect("InvestorsArray not set");
+
+        let token_client = token::Client::new(&e, &stablecoin);
+        let scaled_percent = percent * 1_000_000;
+        let mut verify_released_amount: i128 = 0;
+
+        for i in 0..investors.len() {
+            let investor = investors.get(i).unwrap();
+            let balance = Base::balance(&e, &investor) as i128;
+            let investor_amount = ((balance * scaled_percent) / 100) * PRICE;
+
+            // Update claimed amount for the investor
+            let mut claimed: i128 = e
+                .storage()
+                .instance()
+                .get(&DataKey::ClaimedAmount(investor.clone()))
+                .unwrap_or(0);
+
+            claimed += investor_amount;
+
+            e.storage()
+                .instance()
+                .set(&DataKey::ClaimedAmount(investor.clone()), &claimed);
+
+            // Increase the verify released amount by the investor amount
+            verify_released_amount += investor_amount;
+
+            // Do the transfer from payer to investor
+            token_client.transfer_from(&payer, &payer, &investor, &investor_amount);
+        }
+
+        // CHECK: verify released amount should be equal to amount to release
+        assert!(
+            verify_released_amount == amount_to_release,
+            "DISTRIBUTION_AMOUNT_MISMATCH"
+        );
+    }
+
     //////////////////////// Getters ////////////////////////////////
 
     /// Check if an address is an investor
