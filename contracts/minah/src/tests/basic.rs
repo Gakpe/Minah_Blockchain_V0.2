@@ -70,3 +70,45 @@ fn test_receiver_payer_setter_getter() {
     assert_eq!(updated_receiver, new_receiver);
     assert_eq!(updated_payer, new_payer);
 }
+
+#[test]
+fn test_investor_creation() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let (client, _owner) = create_client(&env, USDC_ADDRESS, &receiver, &payer);
+
+    let new_investor = Address::generate(&env);
+    client.create_investor(&new_investor);
+
+    // Check if the investor was created successfully
+    let is_investor = client.is_investor(&new_investor);
+    assert!(is_investor);
+
+    // Check if the investors array length is 1
+    let investors_array_length = client.get_investors_array_length();
+    assert_eq!(investors_array_length, 1);
+
+    // Check of the claimed amount for the new investor is initialized to 0
+    let claimed_amount = client.see_claimed_amount(&new_investor);
+    assert_eq!(claimed_amount, 0);
+}
+
+#[test]
+#[should_panic(expected = "INVESTOR_ALREADY_EXISTS")]
+fn test_double_investor_creation() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let (client, _owner) = create_client(&env, USDC_ADDRESS, &receiver, &payer);
+
+    let new_investor = Address::generate(&env);
+    client.create_investor(&new_investor);
+
+    // Check if the investor was created successfully
+    let is_investor = client.is_investor(&new_investor);
+    assert!(is_investor);
+
+    // Attempt to create the same investor again, which should panic
+    client.create_investor(&new_investor);
+}

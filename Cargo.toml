@@ -3,7 +3,7 @@ resolver = "2"
 members = ["contracts/*"]
 
 [workspace.dependencies]
-soroban-sdk = "22.0.8 "
+soroban-sdk = "22.0.8"
 stellar-access = "0.4.1"
 stellar-contract-utils = "0.4.1"
 stellar-tokens = "0.4.1"

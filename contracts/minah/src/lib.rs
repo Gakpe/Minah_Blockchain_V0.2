@@ -1,5 +1,5 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Vec, U256};
+use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Symbol, Vec};
 use stellar_access::ownable::{self as ownable, Ownable};
 use stellar_macros::{default_impl, only_owner};
 use stellar_tokens::non_fungible::{Base, NonFungibleToken};
@@ -44,9 +44,16 @@ pub struct Config {
     pub payer: Address,
     pub current_supply: u128,
     pub begin_date: u64,
-    pub current_stage_release: i128,
+    pub current_stage_release: u128,
     pub countdown_start: bool,
     pub state: InvestmentStatus,
+}
+
+//////////////////////// EVENTS ////////////////////////////////
+
+fn emit_investor_created_event(e: &Env, investor: Address) {
+    let topics = (Symbol::new(e, "InvestorCreated"), investor);
+    e.events().publish(topics, ());
 }
 
 #[contract]
@@ -122,13 +129,72 @@ impl Minah {
             .set(&DataKey::StableCoin, &stablecoin);
     }
 
+    /// Creates a new investor.
+    /// Function called from the backend when a user creates a profile on the Minah platform
+    /// # Arguments
+    /// * `newInvestor` : the fireblocks address generated for the new user. To store in the backend.
+    #[only_owner]
+    pub fn create_investor(e: Env, new_investor: Address) {
+        // Check if investor already exists
+        let is_investor = e
+            .storage()
+            .instance()
+            .get(&DataKey::Investor(new_investor.clone()))
+            .unwrap_or(false);
+
+        assert!(!is_investor, "INVESTOR_ALREADY_EXISTS");
+
+        // Add to investors mapping
+        e.storage()
+            .instance()
+            .set(&DataKey::Investor(new_investor.clone()), &true);
+
+        // Add to investors array
+        let mut investors: Vec<Address> = e
+            .storage()
+            .instance()
+            .get(&DataKey::InvestorsArray)
+            .unwrap_or(vec![&e]);
+        investors.push_back(new_investor.clone());
+        e.storage()
+            .instance()
+            .set(&DataKey::InvestorsArray, &investors);
+
+        // Initialize claimed amount to 0
+        e.storage().instance().set(
+            &DataKey::ClaimedAmount(new_investor.clone()),
+            &0u128,
+        );
+
+        // Emit INVESTOR_CREATED event
+        emit_investor_created_event(&e, new_investor);
+    }
+
     /// Mints a new NFT to the specified address.
     /// TODO: Add payment verification logic.
-    pub fn mint(e: &Env, to: Address, amount: U256) {
+    pub fn mint(e: &Env, to: Address, _amount: u128) {
         Base::sequential_mint(e, &to);
     }
 
     //////////////////////// Getters ////////////////////////////////
+
+    /// Check if an address is an investor
+    pub fn is_investor(e: &Env, investor: Address) -> bool {
+        e.storage()
+            .instance()
+            .get(&DataKey::Investor(investor))
+            .unwrap_or(false)
+    }
+
+    /// Get investors array length
+    pub fn get_investors_array_length(e: Env) -> u32 {
+        let investors: Vec<Address> = e
+            .storage()
+            .instance()
+            .get(&DataKey::InvestorsArray)
+            .unwrap_or(vec![&e]);
+        investors.len()
+    }
 
     /// Returns the address of the stablecoin used for investments.
     pub fn get_stablecoin(e: &Env) -> Address {
@@ -152,6 +218,30 @@ impl Minah {
             .instance()
             .get(&DataKey::Payer)
             .expect("Payer not set")
+    }
+
+    /// Get claimed amount for an investor
+    pub fn see_claimed_amount(e: Env, investor: Address) -> u128 {
+        e.storage()
+            .instance()
+            .get(&DataKey::ClaimedAmount(investor))
+            .unwrap_or(0)
+    }
+
+    /// Get current supply
+    pub fn get_current_supply(e: Env) -> u128 {
+        e.storage()
+            .instance()
+            .get(&DataKey::CurrentSupply)
+            .unwrap_or(0)
+    }
+
+    /// Get current state
+    pub fn get_current_state(e: Env) -> InvestmentStatus {
+        e.storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set")
     }
 
     //////////////////////// TO DELETE FOR PROD ////////////////////////////////
