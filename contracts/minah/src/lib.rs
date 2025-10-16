@@ -1,6 +1,7 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Vec};
 use stellar_access::ownable::{self as ownable, Ownable};
+use stellar_macros::{default_impl, only_owner};
 use stellar_tokens::non_fungible::{Base, NonFungibleToken};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -78,9 +79,12 @@ impl Minah {
         e: &Env,
         owner: Address,
         stablecoin: Address,
-        receiver: Address,
-        payer: Address,
+        // receiver: Address,
+        // payer: Address,
     ) {
+        // Ownner should authorize this call
+        owner.require_auth();
+
         let uri = String::from_str(e, "");
         let name = String::from_str(e, "Minah");
         let symbol = String::from_str(e, "MNH");
@@ -92,36 +96,42 @@ impl Minah {
         e.storage()
             .instance()
             .set(&StorageKey::StableCoin, &stablecoin);
-        e.storage().instance().set(&StorageKey::Receiver, &receiver);
-        e.storage().instance().set(&StorageKey::Payer, &payer);
-        e.storage()
-            .instance()
-            .set(&StorageKey::CurrentSupply, &0u128);
-        e.storage().instance().set(&StorageKey::BeginDate, &0u64);
-        e.storage()
-            .instance()
-            .set(&StorageKey::AmountToReleaseForCurrentStage, &0i128);
-        e.storage()
-            .instance()
-            .set(&StorageKey::CountdownStart, &false);
-        e.storage()
-            .instance()
-            .set(&StorageKey::State, &InvestmentStatus::BuyingPhase);
+        // e.storage().instance().set(&StorageKey::Receiver, &receiver);
+        // e.storage().instance().set(&StorageKey::Payer, &payer);
+        // e.storage()
+        //     .instance()
+        //     .set(&StorageKey::CurrentSupply, &0u128);
+        // e.storage().instance().set(&StorageKey::BeginDate, &0u64);
+        // e.storage()
+        //     .instance()
+        //     .set(&StorageKey::AmountToReleaseForCurrentStage, &0i128);
+        // e.storage()
+        //     .instance()
+        //     .set(&StorageKey::CountdownStart, &false);
+        // e.storage()
+        //     .instance()
+        //     .set(&StorageKey::State, &InvestmentStatus::BuyingPhase);
 
-        let empty_investors: Vec<Address> = vec![&e];
-        e.storage()
-            .instance()
-            .set(&StorageKey::InvestorsArray, &empty_investors);
+        // let empty_investors: Vec<Address> = vec![&e];
+        // e.storage()
+        //     .instance()
+        //     .set(&StorageKey::InvestorsArray, &empty_investors);
     }
 
-    /// Get investors array length
-    pub fn get_investors_array_length(e: Env) -> u32 {
-        let investors: Vec<Address> = e
-            .storage()
+    /// Returns the address of the stablecoin used for investments.
+    pub fn get_stablecoin(e: &Env) -> Address {
+        e.storage()
             .instance()
-            .get(&StorageKey::InvestorsArray)
-            .unwrap_or(vec![&e]);
-        investors.len()
+            .get(&StorageKey::StableCoin)
+            .expect("Stablecoin not set")
+    }
+
+    /// Sets a new stablecoin address. Only the contract owner can call this function.
+    #[only_owner]
+    pub fn set_stablecoin(e: &Env, stablecoin: Address) {
+        e.storage()
+            .instance()
+            .set(&StorageKey::StableCoin, &stablecoin);
     }
 
     pub fn hello(env: Env, to: String) -> Vec<String> {
@@ -129,4 +139,9 @@ impl Minah {
     }
 }
 
-mod test;
+#[default_impl]
+#[contractimpl]
+impl Ownable for Minah {}
+
+#[cfg(test)]
+mod tests;
