@@ -62,9 +62,8 @@ fn emit_investor_created_event(e: &Env, investor: Address) {
 pub struct Minah;
 
 // Constants
-const ITEM_ID: i128 = 0;
 const TOTAL_SUPPLY: u32 = 4500;
-const PRICE: i128 = 455;
+const PRICE: i128 = 1;
 const STABLECOIN_SCALE: u32 = 10u32.pow(6); // USDC has 6 decimals
 
 // Distribution intervals in seconds
