@@ -23,7 +23,7 @@ pub enum InvestmentStatus {
 }
 
 #[contracttype]
-pub enum StorageKey {
+pub enum DataKey {
     StableCoin,
     CurrentSupply,
     BeginDate,
@@ -79,8 +79,8 @@ impl Minah {
         e: &Env,
         owner: Address,
         stablecoin: Address,
-        // receiver: Address,
-        // payer: Address,
+        receiver: Address,
+        payer: Address,
     ) {
         // Ownner should authorize this call
         owner.require_auth();
@@ -95,34 +95,30 @@ impl Minah {
         // Initialize Storage
         e.storage()
             .instance()
-            .set(&StorageKey::StableCoin, &stablecoin);
-        // e.storage().instance().set(&StorageKey::Receiver, &receiver);
-        // e.storage().instance().set(&StorageKey::Payer, &payer);
-        // e.storage()
-        //     .instance()
-        //     .set(&StorageKey::CurrentSupply, &0u128);
-        // e.storage().instance().set(&StorageKey::BeginDate, &0u64);
-        // e.storage()
-        //     .instance()
-        //     .set(&StorageKey::AmountToReleaseForCurrentStage, &0i128);
-        // e.storage()
-        //     .instance()
-        //     .set(&StorageKey::CountdownStart, &false);
-        // e.storage()
-        //     .instance()
-        //     .set(&StorageKey::State, &InvestmentStatus::BuyingPhase);
+            .set(&DataKey::StableCoin, &stablecoin);
+        e.storage().instance().set(&DataKey::Receiver, &receiver);
+        e.storage().instance().set(&DataKey::Payer, &payer);
+        e.storage().instance().set(&DataKey::CurrentSupply, &0u128);
+        e.storage().instance().set(&DataKey::BeginDate, &0u64);
+        e.storage()
+            .instance()
+            .set(&DataKey::AmountToReleaseForCurrentStage, &0i128);
+        e.storage().instance().set(&DataKey::CountdownStart, &false);
+        e.storage()
+            .instance()
+            .set(&DataKey::State, &InvestmentStatus::BuyingPhase);
 
-        // let empty_investors: Vec<Address> = vec![&e];
-        // e.storage()
-        //     .instance()
-        //     .set(&StorageKey::InvestorsArray, &empty_investors);
+        let empty_investors: Vec<Address> = vec![&e];
+        e.storage()
+            .instance()
+            .set(&DataKey::InvestorsArray, &empty_investors);
     }
 
     /// Returns the address of the stablecoin used for investments.
     pub fn get_stablecoin(e: &Env) -> Address {
         e.storage()
             .instance()
-            .get(&StorageKey::StableCoin)
+            .get(&DataKey::StableCoin)
             .expect("Stablecoin not set")
     }
 
@@ -131,7 +127,35 @@ impl Minah {
     pub fn set_stablecoin(e: &Env, stablecoin: Address) {
         e.storage()
             .instance()
-            .set(&StorageKey::StableCoin, &stablecoin);
+            .set(&DataKey::StableCoin, &stablecoin);
+    }
+
+    pub fn get_receiver(e: &Env) -> Address {
+        e.storage()
+            .instance()
+            .get(&DataKey::Receiver)
+            .expect("Receiver not set")
+    }
+
+    pub fn get_payer(e: &Env) -> Address {
+        e.storage()
+            .instance()
+            .get(&DataKey::Payer)
+            .expect("Payer not set")
+    }
+
+    //////////////////////// TO DELETE FOR PROD ////////////////////////////////
+
+    /// Sets a new receiver address. Only the contract owner can call this function.
+    #[only_owner]
+    pub fn set_receiver(e: &Env, receiver: Address) {
+        e.storage().instance().set(&DataKey::Receiver, &receiver);
+    }
+
+    /// Sets a new payer address. Only the contract owner can call this function.
+    #[only_owner]
+    pub fn set_payer(e: &Env, payer: Address) {
+        e.storage().instance().set(&DataKey::Payer, &payer);
     }
 
     pub fn hello(env: Env, to: String) -> Vec<String> {
