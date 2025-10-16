@@ -1,13 +1,10 @@
-#![cfg(test)]
-
-use super::*;
+use crate::tests::utils::{create_client, USDC_ADDRESS};
 use soroban_sdk::{vec, Env, String};
 
 #[test]
-fn test() {
+fn test_hello() {
     let env = Env::default();
-    let contract_id = env.register(Minah, ());
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, _owner) = create_client(&env, USDC_ADDRESS);
 
     let words = client.hello(&String::from_str(&env, "Dev"));
     assert_eq!(
