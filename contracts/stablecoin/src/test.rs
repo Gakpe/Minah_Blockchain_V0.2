@@ -14,12 +14,15 @@ fn test_deploy_stablecoin() {
     let name = stablecoin_client.name();
     let symbol = stablecoin_client.symbol();
     let decimals = stablecoin_client.decimals();
+    let user_balance = stablecoin_client.balance(&user);
 
     let expected_name = String::from_str(&env, "USDC Mock Token");
     let expected_symbol = String::from_str(&env, "USDC");
     let expected_decimals = 6u32;
+    let expected_user_balance = premint_amount;
 
     assert_eq!(name, expected_name);
     assert_eq!(symbol, expected_symbol);
     assert_eq!(decimals, expected_decimals);
+    assert_eq!(user_balance, expected_user_balance);
 }
