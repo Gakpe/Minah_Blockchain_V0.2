@@ -4,7 +4,10 @@ use soroban_sdk::{
 };
 use stellar_access::ownable::{self as ownable, Ownable};
 use stellar_macros::{default_impl, only_owner};
-use stellar_tokens::non_fungible::{Base, NonFungibleToken};
+use stellar_tokens::non_fungible::{
+    consecutive::{Consecutive, NonFungibleConsecutive},
+    Base, NonFungibleToken,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[contracttype]
@@ -50,7 +53,7 @@ fn emit_investor_created_event(e: &Env, investor: Address) {
 pub struct Minah;
 
 // Constants
-const TOTAL_SUPPLY: u32 = 200; // TODO: change to 4500 for production
+const TOTAL_SUPPLY: u32 = 4500;
 const PRICE: i128 = 1; // TODO: change to 455 for production
 const STABLECOIN_SCALE: u32 = 10u32.pow(6); // USDC has 6 decimals
 
@@ -276,12 +279,7 @@ impl Minah {
             .set(&DataKey::CurrentSupply, &new_supply);
 
         // Mint the requested amount of NFTs to the specified address
-        for _ in 0..amount {
-            // Mint the NFT
-            Base::sequential_mint(&e, &user);
-        }
-
-        // TODO: emit NFT_MINTED event
+        Consecutive::batch_mint(&e, &user, amount);
     }
 
     /// Start the chronometer for ROI distribution
@@ -331,9 +329,7 @@ impl Minah {
             // Mint the remaining amount of NFTs to the owner
             let owner = ownable::get_owner(&e).expect("Owner not set");
 
-            for _ in 0..remaining {
-                Base::sequential_mint(&e, &owner);
-            }
+            Consecutive::batch_mint(&e, &owner, remaining);
         }
     }
 
@@ -620,8 +616,10 @@ impl Minah {
 #[default_impl]
 #[contractimpl]
 impl NonFungibleToken for Minah {
-    type ContractType = Base;
+    type ContractType = Consecutive;
 }
+
+impl NonFungibleConsecutive for Minah {}
 
 #[default_impl]
 #[contractimpl]
