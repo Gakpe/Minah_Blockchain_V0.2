@@ -263,6 +263,13 @@ impl Minah {
 
         let user_allowance = stablecoin_client.allowance(&user, &current_address);
 
+        log!(
+            &e,
+            "User allowance: {}, Required amount: {}",
+            user_allowance,
+            usd_amount
+        );
+
         assert!(user_allowance >= usd_amount, "INSUFFICIENT_ALLOWANCE");
 
         let receiver: Address = e
@@ -596,6 +603,11 @@ impl Minah {
             .instance()
             .get(&DataKey::State)
             .expect("State not set")
+    }
+
+    /// Get NFT PRICE
+    pub fn get_nft_price(_e: Env) -> i128 {
+        PRICE
     }
 
     //////////////////////// TO DELETE FOR PROD ////////////////////////////////
