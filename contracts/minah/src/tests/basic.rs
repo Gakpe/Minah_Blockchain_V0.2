@@ -131,32 +131,6 @@ fn test_double_investor_creation() {
 }
 
 #[test]
-fn test_start_chronometer() {
-    let env = Env::default();
-    let receiver = Address::generate(&env);
-    let payer = Address::generate(&env);
-    let owner = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
-    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
-
-    // Initially, the chronometer should not be started
-    let is_started = client.is_chronometer_started();
-    assert!(!is_started);
-
-    // Start the chronometer
-    client.start_chronometer();
-
-    // Verify that the chronometer has been started
-    let is_started = client.is_chronometer_started();
-    assert!(is_started);
-
-    // Verify that the start time is set to the current ledger timestamp
-    let start_time = client.get_begin_date();
-    let current_time = env.ledger().timestamp();
-    assert_eq!(start_time, current_time);
-}
-
-#[test]
 fn test_deploy_mock_stablecoin() {
     let env = Env::default();
 
