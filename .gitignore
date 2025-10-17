@@ -4,5 +4,6 @@ target
 # Local settings
 .soroban
 .stellar
+copilot-instructions.md
 
 test_snapshots
