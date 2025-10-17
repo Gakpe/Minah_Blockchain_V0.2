@@ -39,18 +39,6 @@ pub enum DataKey {
     ClaimedAmount(Address),
 }
 
-#[contracttype]
-pub struct Config {
-    pub stablecoin: Address,
-    pub receiver: Address,
-    pub payer: Address,
-    pub current_supply: i128,
-    pub begin_date: u64,
-    pub current_stage_release: i128,
-    pub countdown_start: bool,
-    pub state: InvestmentStatus,
-}
-
 //////////////////////// EVENTS ////////////////////////////////
 
 fn emit_investor_created_event(e: &Env, investor: Address) {
@@ -62,8 +50,8 @@ fn emit_investor_created_event(e: &Env, investor: Address) {
 pub struct Minah;
 
 // Constants
-const TOTAL_SUPPLY: u32 = 4500;
-const PRICE: i128 = 1;
+const TOTAL_SUPPLY: u32 = 200; // TODO: change to 4500 for production
+const PRICE: i128 = 1; // TODO: change to 455 for production
 const STABLECOIN_SCALE: u32 = 10u32.pow(6); // USDC has 6 decimals
 
 // Distribution intervals in seconds
