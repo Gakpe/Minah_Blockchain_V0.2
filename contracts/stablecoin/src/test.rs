@@ -1,13 +1,13 @@
-use soroban_sdk::{Address, Env, String};
+use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 use crate::{utils::deploy_stablecoin_contract, Stablecoin, StablecoinClient};
-
-
 
 #[test]
 fn test_deploy_stablecoin() {
     let env = Env::default();
-    let contract_id = deploy_stablecoin_contract(&env);
+    let user = Address::generate(&env);
+    let premint_amount = 100000000000000000000000;
+    let contract_id = deploy_stablecoin_contract(&env, &user, premint_amount);
     let stablecoin_client = StablecoinClient::new(&env, &contract_id);
 
     // Verify metadata

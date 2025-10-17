@@ -1,4 +1,4 @@
-use crate::tests::utils::{create_client, USDC_ADDRESS};
+use crate::tests::utils::create_client;
 use soroban_sdk::{testutils::Address as _, vec, Address, Env, String};
 use stablecoin::{utils::deploy_stablecoin_contract, StablecoinClient};
 
@@ -7,9 +7,9 @@ fn test_hello() {
     let env = Env::default();
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env);
-
-    let (client, _owner) = create_client(&env, &stablecoin_address, &receiver, &payer);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
 
     let words = client.hello(&String::from_str(&env, "Dev"));
     assert_eq!(
@@ -28,9 +28,10 @@ fn test_stablecoin_setter_getter() {
 
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
 
-    let (client, _owner) = create_client(&env, &stablecoin_address, &receiver, &payer);
     // Initially, the stablecoin should be set to stablecoin_address
     let initial_stablecoin = client.get_stablecoin();
     assert_eq!(initial_stablecoin, stablecoin_address);
@@ -52,9 +53,15 @@ fn test_receiver_payer_setter_getter() {
     let env = Env::default();
     let initial_receiver = Address::generate(&env);
     let initial_payer = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env);
-    let (client, _owner) =
-        create_client(&env, &stablecoin_address, &initial_receiver, &initial_payer);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+    let client = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &initial_receiver,
+        &initial_payer,
+    );
 
     // Initially, the receiver and payer should be set to initial_receiver and initial_payer
     let receiver = client.get_receiver();
@@ -80,9 +87,10 @@ fn test_investor_creation() {
     let env = Env::default();
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
 
-    let (client, _owner) = create_client(&env, &stablecoin_address, &receiver, &payer);
+    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
 
     let new_investor = Address::generate(&env);
     client.create_investor(&new_investor);
@@ -106,9 +114,10 @@ fn test_double_investor_creation() {
     let env = Env::default();
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
 
-    let (client, _owner) = create_client(&env, &stablecoin_address, &receiver, &payer);
+    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
 
     let new_investor = Address::generate(&env);
     client.create_investor(&new_investor);
@@ -121,12 +130,14 @@ fn test_double_investor_creation() {
     client.create_investor(&new_investor);
 }
 
-/* #[test]
+#[test]
 fn test_start_chronometer() {
     let env = Env::default();
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let (client, _owner) = create_client(&env, USDC_ADDRESS, &receiver, &payer);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
 
     // Initially, the chronometer should not be started
     let is_started = client.is_chronometer_started();
@@ -144,15 +155,14 @@ fn test_start_chronometer() {
     let current_time = env.ledger().timestamp();
     assert_eq!(start_time, current_time);
 }
- */
 
 #[test]
 fn test_deploy_mock_stablecoin() {
     let env = Env::default();
 
-    let contract_id = deploy_stablecoin_contract(&env);
-
-    let stablecoin_client = StablecoinClient::new(&env, &contract_id);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+    let stablecoin_client = StablecoinClient::new(&env, &stablecoin_address);
 
     // Verify metadata
     let name = stablecoin_client.name();
