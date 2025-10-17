@@ -1,7 +1,6 @@
 use soroban_sdk::{testutils::Address as _, Address, Env};
-use stablecoin::utils::deploy_stablecoin_contract;
 
-use crate::{tests::utils::create_client, Minah, MinahClient};
+use crate::{tests::utils::{create_client, deploy_stablecoin_contract}, Minah, MinahClient};
 
 #[test]
 #[should_panic(expected = "USER_NOT_AN_INVESTOR")]

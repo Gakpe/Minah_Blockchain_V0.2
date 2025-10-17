@@ -32,7 +32,5 @@ impl FungibleToken for Stablecoin {
     type ContractType = Base;
 }
 
-pub mod utils;
-
 #[cfg(test)]
 mod test;

@@ -1,6 +1,6 @@
-use crate::tests::utils::create_client;
+use crate::tests::utils::{create_client, deploy_stablecoin_contract};
 use soroban_sdk::{testutils::Address as _, vec, Address, Env, String};
-use stablecoin::{utils::deploy_stablecoin_contract, StablecoinClient};
+use stablecoin::StablecoinClient;
 
 #[test]
 fn test_hello() {
