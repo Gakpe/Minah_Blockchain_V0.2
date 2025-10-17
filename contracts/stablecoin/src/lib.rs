@@ -12,7 +12,7 @@ impl Stablecoin {
     pub fn __constructor(e: &Env) {
         Base::set_metadata(
             e,
-            6,
+            6u32,
             String::from_str(e, "USDC Mock Token"),
             String::from_str(e, "USDC"),
         );
@@ -28,6 +28,8 @@ impl Stablecoin {
 impl FungibleToken for Stablecoin {
     type ContractType = Base;
 }
+
+pub mod utils;
 
 #[cfg(test)]
 mod test;
