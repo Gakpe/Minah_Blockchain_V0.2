@@ -2,6 +2,10 @@ use soroban_sdk::{testutils::Address as _, vec, Address, Env, String};
 
 use crate::{Minah, MinahClient};
 
+mod stablecoin_contract {
+    soroban_sdk::contractimport!(file = "../../target/wasm32v1-none/release/stablecoin.wasm");
+}
+
 pub const USDC_ADDRESS: &str = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 
 pub fn create_client<'a>(

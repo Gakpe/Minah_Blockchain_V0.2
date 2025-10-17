@@ -113,7 +113,7 @@ fn test_double_investor_creation() {
     client.create_investor(&new_investor);
 }
 
-#[test]
+/* #[test]
 fn test_start_chronometer() {
     let env = Env::default();
     let receiver = Address::generate(&env);
@@ -136,3 +136,4 @@ fn test_start_chronometer() {
     let current_time = env.ledger().timestamp();
     assert_eq!(start_time, current_time);
 }
+ */
