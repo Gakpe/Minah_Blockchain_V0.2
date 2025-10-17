@@ -133,5 +133,11 @@ fn test_mint_nft() {
     // CHECK: allowance should be equal to total_amount
     assert_eq!(allowance, total_amount);
 
+    // Mint the NFTs
     client.mint(&nft_receiver, &nft_amount);
+
+    // CHECK: NFT balance of nft_receiver should be
+    let nft_balance = client.balance(&nft_receiver);
+
+    assert_eq!(nft_balance, nft_amount);
 }
