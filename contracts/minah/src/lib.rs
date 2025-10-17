@@ -272,7 +272,8 @@ impl Minah {
             .expect("Receiver not set");
 
         // Do the transfer of stablecoin from user to the receiver address
-        stablecoin_client.transfer_from(&user, &user, &receiver, &usd_amount);
+        // NOTE: The user must have approved the contract to spend the stablecoin on their behalf
+        stablecoin_client.transfer_from(&current_address, &user, &receiver, &usd_amount);
 
         // Update current supply to new supply
         e.storage()
@@ -478,6 +479,8 @@ impl Minah {
         let scaled_percent = percent * 1_000_000;
         let mut verify_released_amount: i128 = 0;
 
+        let current_address = e.current_contract_address();
+
         for i in 0..investors.len() {
             let investor = investors.get(i).unwrap();
             let balance = Base::balance(&e, &investor) as i128;
@@ -500,7 +503,8 @@ impl Minah {
             verify_released_amount += investor_amount;
 
             // Do the transfer from payer to investor
-            token_client.transfer_from(&payer, &payer, &investor, &investor_amount);
+            // NOTE: The payer must have approved the contract to spend the stablecoin on their behalf
+            token_client.transfer_from(&current_address, &payer, &investor, &investor_amount);
         }
 
         // CHECK: verify released amount should be equal to amount to release
