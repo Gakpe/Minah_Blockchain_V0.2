@@ -49,6 +49,11 @@ fn emit_investor_created_event(e: &Env, investor: Address) {
     e.events().publish(topics, ());
 }
 
+fn emit_started_chronometer_event(e: &Env) {
+    let topics = (Symbol::new(e, "ChronometerStarted"),);
+    e.events().publish(topics, ());
+}
+
 #[contract]
 pub struct Minah;
 
@@ -331,6 +336,9 @@ impl Minah {
 
             Consecutive::batch_mint(&e, &owner, remaining);
         }
+
+        // Emit CHRONOMETER_STARTED event
+        emit_started_chronometer_event(&e);
     }
 
     /// Calculate amount to release for a given percentage
@@ -510,7 +518,7 @@ impl Minah {
         );
     }
 
-    //////////////////////// Getters ////////////////////////////////
+    //////////////////////////////// Getters ////////////////////////////////
 
     /// Check if an address is an investor
     pub fn is_investor(e: &Env, investor: Address) -> bool {
