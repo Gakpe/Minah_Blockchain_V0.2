@@ -9,7 +9,7 @@ use stellar_tokens::non_fungible::{
     Base, NonFungibleToken,
 };
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[contracttype]
 pub enum InvestmentStatus {
     BuyingPhase = 0,
@@ -59,16 +59,16 @@ const STABLECOIN_SCALE: u32 = 10u32.pow(6); // USDC has 6 decimals
 
 // Distribution intervals in seconds
 const DISTRIBUTION_INTERVALS: [u64; 10] = [
-    60,  // 1 minute
-    120, // 2 minutes
-    180, // 3 minutes
-    240, // 4 minutes
-    300, // 5 minutes
-    360, // 6 minutes
-    420, // 7 minutes
-    480, // 8 minutes
-    540, // 9 minutes
-    600, // 10 minutes
+    15_768_000,  // 6 months
+    26_280_000,  // 10 months
+    36_792_000,  // 1 year 2 months
+    47_304_000,  // 1 year 6 months
+    57_816_000,  // 1 year 10 months
+    68_328_000,  // 2 years 2 months
+    78_840_000,  // 2 years 6 months
+    89_352_000,  // 2 years 10 months
+    99_864_000,  // 3 years 2 months
+    110_376_000, // 3 years 6 months
 ];
 
 const ROI_PERCENTAGES: [i128; 10] = [8, 8, 8, 8, 8, 8, 8, 8, 8, 108];
@@ -377,7 +377,11 @@ impl Minah {
             .get(&DataKey::BeginDate)
             .expect("BeginDate not set");
 
-        let elapsed = e.ledger().timestamp() - begin_date;
+        let current_time = e.ledger().timestamp();
+
+        assert!(current_time >= begin_date, "INVALID_LEDGER_TIME");
+
+        let elapsed = current_time - begin_date;
 
         let mut state: InvestmentStatus = e
             .storage()
@@ -385,6 +389,7 @@ impl Minah {
             .get(&DataKey::State)
             .expect("State not set");
 
+        // SUB is safe here because of the check(countdownStart should be true)
         let mut current_stage_index = (state as u32) - 1;
         let mut distributed = false;
 
@@ -416,8 +421,8 @@ impl Minah {
 
             e.storage().instance().set(&DataKey::State, &state);
 
-            // Saturate to avoid overflow(If the calculation overflows the min value of the type, it will be set to the min value)
-            current_stage_index = (state as u32).saturating_sub(1);
+            // SUB is safe here because of the check(countdownStart should be true)
+            current_stage_index = (state as u32) - 1;
             distributed = true;
 
             if state == InvestmentStatus::ThreeYearsSixMonthsDone {
