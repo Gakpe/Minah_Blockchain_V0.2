@@ -574,7 +574,7 @@ impl Minah {
     }
 
     /// Get current supply
-    pub fn get_current_supply(e: Env) -> i128 {
+    pub fn get_current_supply(e: Env) -> u32 {
         e.storage()
             .instance()
             .get(&DataKey::CurrentSupply)
