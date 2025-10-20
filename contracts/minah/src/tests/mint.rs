@@ -1,6 +1,9 @@
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
-use crate::{tests::utils::{create_client, deploy_stablecoin_contract}, Minah, MinahClient};
+use crate::{
+    tests::utils::{create_client, deploy_stablecoin_contract, mint_nft},
+    Minah, MinahClient,
+};
 
 #[test]
 #[should_panic(expected = "USER_NOT_AN_INVESTOR")]
@@ -163,42 +166,16 @@ fn test_start_chronometer() {
 
     let nft_amount: u32 = 150;
 
-    // Create An investor before minting
-    client.create_investor(&nft_receiver);
-
-    // CHECK: Is the investor created successfully?
-    let is_investor = client.is_investor(&nft_receiver);
-    assert!(is_investor);
-
-    // Transfer The Required Stablecoin Amount to the nft receiver so that the minting can proceed
-    let nft_price = client.get_nft_price();
-
-    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(6);
-
-    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
-
-    // Transfer stablecoin to the nft_receiver
-    stablecoin_client.transfer(&owner, &nft_receiver, &total_amount);
-
-    // CHECK: balance of nft_receiver should be equal to total_amount
-    let nft_receiver_balance = stablecoin_client.balance(&nft_receiver);
-    assert_eq!(nft_receiver_balance, total_amount);
-
-    // Increase Allowance for the payer to allow the contract to spend stablecoin on behalf of nft_receiver
-    stablecoin_client.approve(&nft_receiver, &contract_id, &total_amount, &100);
-
-    let allowance = stablecoin_client.allowance(&nft_receiver, &contract_id);
-
-    // CHECK: allowance should be equal to total_amount
-    assert_eq!(allowance, total_amount);
-
-    // Mint the NFTs
-    client.mint(&nft_receiver, &nft_amount);
-
-    // CHECK: NFT balance of nft_receiver should be
-    let nft_balance = client.balance(&nft_receiver);
-
-    assert_eq!(nft_balance, nft_amount);
+    // Mint NFTs to set up the chronometer test
+    mint_nft(
+        &env,
+        &client,
+        &nft_receiver,
+        nft_amount,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
 
     // Initially, the chronometer should not be started
     let is_started = client.is_chronometer_started();
