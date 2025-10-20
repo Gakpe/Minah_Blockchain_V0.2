@@ -1,3 +1,4 @@
 mod basic;
-mod utils;
 mod mint;
+mod release;
+mod utils;
