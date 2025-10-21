@@ -731,6 +731,104 @@ impl Minah {
         emit_tokens_bought_event(&e, from, to, nft_amount as u32);
     }
 
+    pub fn sell_tokens(e: Env, from: Address, to: Address, token_ids: Vec<u32>) {
+        // From should authorize this call
+        from.require_auth();
+
+        // CHECK: Current state should not be BuyingPhase
+        let current_state: InvestmentStatus = e
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set");
+
+        assert!(
+            current_state != InvestmentStatus::BuyingPhase,
+            "NFT_TRANSFERS_NOT_ALLOWED_DURING_BUYING_PHASE"
+        );
+
+        // CHECK: Both from and to addresses should be either investors or owner
+        let is_from_investor = e
+            .storage()
+            .instance()
+            .get(&DataKey::Investor(from.clone()))
+            .unwrap_or(false);
+
+        let is_to_investor = e
+            .storage()
+            .instance()
+            .get(&DataKey::Investor(to.clone()))
+            .unwrap_or(false);
+
+        let owner = ownable::get_owner(&e).expect("OWNER_NOT_SET");
+
+        assert!(
+            is_from_investor || from == owner,
+            "FROM_ADDRESS_NOT_INVESTOR_OR_OWNER"
+        );
+
+        assert!(
+            is_to_investor || to == owner,
+            "TO_ADDRESS_NOT_INVESTOR_OR_OWNER"
+        );
+
+        // CHECK: nft_amount should be less than or equal to maximum allowed per transaction
+        let nft_amount = token_ids.len() as i128;
+
+        assert!(
+            nft_amount <= MAXIMUM_NFTS_PER_TRANSACTION,
+            "MAXIMUM_NFTS_PER_TRANSACTION_EXCEEDED"
+        );
+
+        // CHECK: from should have enough NFTs to sell
+        let from_balance = Self::balance(&e, from.clone());
+
+        assert!(
+            from_balance as i128 >= nft_amount,
+            "INSUFFICIENT_FROM_NFT_BALANCE"
+        );
+
+        // CHECK: to stablecoin balance should be enough to cover the selling fee
+        let stablecoin_address: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::StableCoin)
+            .expect("STABLECOIN_NOT_SET");
+
+        let stablecoin_client = token::Client::new(&e, &stablecoin_address);
+
+        let price_per_nft = PRICE * STABLECOIN_SCALE as i128;
+        let total_price = nft_amount * price_per_nft;
+
+        let to_balance = stablecoin_client.balance(&to);
+
+        assert!(
+            to_balance >= total_price,
+            "INSUFFICIENT_BALANCE_TO_SELL_NFTS"
+        );
+
+        // CHECK: to allowance should be enough to cover the selling fee
+        let current_address = e.current_contract_address();
+
+        let to_allowance = stablecoin_client.allowance(&to, &current_address);
+
+        assert!(
+            to_allowance >= total_price,
+            "INSUFFICIENT_ALLOWANCE_TO_SELL_NFTS"
+        );
+
+        // DO: Trasnfer stablecoin total_price
+        stablecoin_client.transfer_from(&e.current_contract_address(), &to, &from, &total_price);
+
+        // DO: Transfer NFTs
+        Self::batch_transfer_from(&e, &current_address, &from, &to, token_ids);
+
+        // Emit TOKENS_SOLD event
+        emit_tokens_sold_event(&e, from, to, nft_amount as u32);
+    }
+
+    //////////////////////// INTERNALS ////////////////////////////////
+
     fn batch_transfer_from(
         e: &Env,
         spender: &Address,
