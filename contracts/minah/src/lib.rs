@@ -93,7 +93,12 @@ const DISTRIBUTION_INTERVALS: [u64; 10] = [
     110_376_000, // 3 years 6 months
 ];
 
-const ROI_PERCENTAGES: [i128; 10] = [8, 8, 8, 8, 8, 8, 8, 8, 8, 108];
+// ROI percentages are scaled by 1_000_000 to handle decimal percentages
+// ROI_PERCENTAGES = [4, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67]
+const ROI_PERCENTAGES: [i128; 10] = [
+    4_000_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000,
+    2_670_000, 2_670_000,
+];
 
 #[contractimpl]
 impl Minah {
@@ -361,7 +366,7 @@ impl Minah {
     /// Calculate amount to release for a given percentage
     /// Function to know how much to approve() on the STABLECOIN smart contract before releasing the amount to all investors.
     /// Arguments:
-    /// * `percentage`: the percentage of ROI to be released for the current stage.
+    /// * `percentage`: the percentage of ROI to be released for the current stage.(Scaled by 1_000_000 to handle decimal percentages)
     pub fn calculate_amount_to_release(e: Env, percent: i128) -> i128 {
         let investors: Vec<Address> = e
             .storage()
@@ -370,12 +375,11 @@ impl Minah {
             .expect("InvestorsArray not set");
 
         let mut amount_to_release: i128 = 0;
-        let scaled_percent = percent * 1_000_000;
 
         for i in 0..investors.len() {
             let investor = investors.get(i).expect("Investor not found");
             let balance = Base::balance(&e, &investor) as i128;
-            let investor_amount = ((balance * scaled_percent) / 100i128) * PRICE;
+            let investor_amount = ((balance * percent) / 100) * PRICE;
 
             amount_to_release += investor_amount;
         }
@@ -464,7 +468,7 @@ impl Minah {
     /// Internal distribution function
     /// The function called from releaseDistribution() and used to distribute to investors what they earned during the current period/stage.
     /// Arguments:
-    /// * `percent`: the percentage of ROI to be released for the current stage.
+    /// * `percent`: the percentage of ROI to be released for the current stage.(Scaled by 1_000_000 to handle decimal percentages)
     fn distribute(e: &Env, percent: i128) {
         // CHECK: State should not be Ended
         let state: InvestmentStatus = e
@@ -497,7 +501,6 @@ impl Minah {
             .expect("InvestorsArray not set");
 
         let token_client = token::Client::new(&e, &stablecoin);
-        let scaled_percent = percent * 1_000_000;
         let mut verify_released_amount: i128 = 0;
 
         let current_address = e.current_contract_address();
@@ -505,7 +508,7 @@ impl Minah {
         for i in 0..investors.len() {
             let investor = investors.get(i).unwrap();
             let balance = Base::balance(&e, &investor) as i128;
-            let investor_amount = ((balance * scaled_percent) / 100) * PRICE;
+            let investor_amount = ((balance * percent) / 100) * PRICE;
 
             // Update claimed amount for the investor
             let mut claimed: i128 = e
