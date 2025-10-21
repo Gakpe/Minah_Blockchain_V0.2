@@ -12,8 +12,6 @@ export interface CreateInvestorRequest {
   email: string;
   firstName: string;
   lastName: string;
-  phoneNumber?: string;
-  country?: string;
 }
 
 export interface InvestorResponse {
@@ -22,9 +20,6 @@ export interface InvestorResponse {
   email: string;
   firstName: string;
   lastName: string;
-  phoneNumber?: string;
-  country?: string;
-  kycStatus: "pending" | "approved" | "rejected";
   nftBalance: number;
   totalInvested: number;
   claimedAmount: number;

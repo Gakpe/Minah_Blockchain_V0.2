@@ -51,22 +51,7 @@ const swaggerDefinition = {
             description: "Last name of the investor",
             example: "Doe",
           },
-          phoneNumber: {
-            type: "string",
-            description: "Phone number of the investor",
-            example: "+1234567890",
-          },
-          country: {
-            type: "string",
-            description: "Country of residence",
-            example: "USA",
-          },
-          kycStatus: {
-            type: "string",
-            enum: ["pending", "approved", "rejected"],
-            description: "KYC verification status",
-            example: "pending",
-          },
+          // phoneNumber, country and kycStatus removed
           nftBalance: {
             type: "number",
             description: "Number of NFTs owned",

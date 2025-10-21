@@ -5,9 +5,6 @@ export interface IInvestor extends Document {
   email: string;
   firstName: string;
   lastName: string;
-  phoneNumber?: string;
-  country?: string;
-  kycStatus: "pending" | "approved" | "rejected";
   nftBalance: number;
   totalInvested: number;
   claimedAmount: number;
@@ -39,19 +36,6 @@ const InvestorSchema: Schema = new Schema(
       type: String,
       required: true,
       trim: true,
-    },
-    phoneNumber: {
-      type: String,
-      trim: true,
-    },
-    country: {
-      type: String,
-      trim: true,
-    },
-    kycStatus: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
     },
     nftBalance: {
       type: Number,

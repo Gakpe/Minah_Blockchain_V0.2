@@ -24,23 +24,17 @@ import { stellarService } from "../services/stellar.service";
  *               stellarAddress:
  *                 type: string
  *                 description: Stellar blockchain address
- *                 example: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ *                 example: "GALXBNO5FE4BGADFPNHNLOKCEHD6B7CBVE57BN6AXQQY5EYK4Q7IYTGM"
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "investor@example.com"
+ *                 example: "ayoub@gmail.com"
  *               firstName:
  *                 type: string
- *                 example: "John"
+ *                 example: "Ayoub"
  *               lastName:
  *                 type: string
- *                 example: "Doe"
- *               phoneNumber:
- *                 type: string
- *                 example: "+1234567890"
- *               country:
- *                 type: string
- *                 example: "USA"
+ *                 example: "Buoya"
  *     responses:
  *       201:
  *         description: Investor created successfully
@@ -58,12 +52,6 @@ import { stellarService } from "../services/stellar.service";
  *                 data:
  *                   type: object
  *                   properties:
- *                     investor:
- *                       $ref: '#/components/schemas/Investor'
- *                     transactionHash:
- *                       type: string
- *                       description: Stellar blockchain transaction hash
- *                       example: "abc123..."
  *       400:
  *         description: Bad request - validation errors
  *         content:
@@ -88,22 +76,14 @@ export const createInvestor = async (
   res: Response
 ): Promise<void> => {
   try {
-    const {
-      stellarAddress,
-      email,
-      firstName,
-      lastName,
-      phoneNumber,
-      country,
-    } = req.body;
+    const { stellarAddress, email, firstName, lastName } = req.body;
 
     // Validation
     if (!stellarAddress || !email || !firstName || !lastName) {
       res.status(400).json({
         success: false,
         message: "Missing required fields",
-        error:
-          "stellarAddress, email, firstName, and lastName are required",
+        error: "stellarAddress, email, firstName, and lastName are required",
       });
       return;
     }
@@ -164,9 +144,6 @@ export const createInvestor = async (
       email: email.toLowerCase(),
       firstName,
       lastName,
-      phoneNumber,
-      country,
-      kycStatus: "pending",
       nftBalance: 0,
       totalInvested: 0,
       claimedAmount: 0,
@@ -184,9 +161,7 @@ export const createInvestor = async (
           email: investor.email,
           firstName: investor.firstName,
           lastName: investor.lastName,
-          phoneNumber: investor.phoneNumber,
-          country: investor.country,
-          kycStatus: investor.kycStatus,
+          // phoneNumber, country and kycStatus removed from response
           nftBalance: investor.nftBalance,
           totalInvested: investor.totalInvested,
           claimedAmount: investor.claimedAmount,
