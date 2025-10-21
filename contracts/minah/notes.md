@@ -14,9 +14,10 @@ stellar contract deploy \
 ```
 
 ## Test Hello CMD
+
 ```bash
 stellar contract invoke \
-  --id CCSN3TSGYB2AWBS535AN5CGKUYBFGTAK62GEZL45S3I5JUU556ZWYJDP \
+  --id CCLYOFOQRM337RESE7WVBY6U3WL7IJKCWE7JES3J2L6OYMHBZ3USJW4A \
   --source-account alice \
   --network testnet \
   -- \
@@ -24,6 +25,18 @@ stellar contract invoke \
   --to Buoya
 ```
 
+## Create Investor CMD
+
+```bash
+stellar contract invoke \
+  --id CCLYOFOQRM337RESE7WVBY6U3WL7IJKCWE7JES3J2L6OYMHBZ3USJW4A \
+  --source-account alice \
+  --network testnet \
+  -- \
+  create_investor \
+  --new_investor GALXBNO5FE4BGADFPNHNLOKCEHD6B7CBVE57BN6AXQQY5EYK4Q7IYTGM
+```
+
 ## Deployed Address
 
-CCSN3TSGYB2AWBS535AN5CGKUYBFGTAK62GEZL45S3I5JUU556ZWYJDP
+CCLYOFOQRM337RESE7WVBY6U3WL7IJKCWE7JES3J2L6OYMHBZ3USJW4A
