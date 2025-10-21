@@ -54,13 +54,30 @@ fn emit_started_chronometer_event(e: &Env) {
     e.events().publish(topics, ());
 }
 
+fn emit_tokens_bought_event(e: &Env, from: Address, to: Address, amount: u32) {
+    let topics = (Symbol::new(e, "TokensBought"), from, to);
+    e.events().publish(topics, amount);
+}
+
+fn emit_tokens_sold_event(e: &Env, from: Address, to: Address, amount: u32) {
+    let topics = (Symbol::new(e, "TokensSold"), from, to);
+    e.events().publish(topics, amount);
+}
+
+fn emit_batch_transfer_event(e: &Env, from: &Address, to: &Address, token_ids: Vec<u32>) {
+    let topics = (Symbol::new(e, "BatchTransfer"), from, to);
+    e.events().publish(topics, token_ids);
+}
+
 #[contract]
 pub struct Minah;
 
 // Constants
 const TOTAL_SUPPLY: u32 = 4500;
 const PRICE: i128 = 1; // TODO: change to 455 for production
-const STABLECOIN_SCALE: u32 = 10u32.pow(6); // USDC has 6 decimals
+const STABLECOIN_SCALE: u32 = 10u32.pow(6);
+// Maximum NFTs allowed per transaction during marketplace operations (transfers)
+const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
 
 // Distribution intervals in seconds
 const DISTRIBUTION_INTERVALS: [u64; 10] = [
@@ -607,6 +624,134 @@ impl Minah {
         PRICE
     }
 
+    //////////////////////// NFT MARKETPLACE ////////////////////////////////
+
+    pub fn buy_tokens(e: Env, from: Address, to: Address, token_ids: Vec<u32>) {
+        // To should authorize this call
+        to.require_auth();
+
+        // CHECK: Current state should not be BuyingPhase
+        let current_state: InvestmentStatus = e
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set");
+
+        assert!(
+            current_state != InvestmentStatus::BuyingPhase,
+            "NFT_TRANSFERS_NOT_ALLOWED_DURING_BUYING_PHASE"
+        );
+
+        // CHECK: Both from and to addresses should be either investors or owner
+        let is_from_investor = e
+            .storage()
+            .instance()
+            .get(&DataKey::Investor(from.clone()))
+            .unwrap_or(false);
+
+        let is_to_investor = e
+            .storage()
+            .instance()
+            .get(&DataKey::Investor(to.clone()))
+            .unwrap_or(false);
+
+        let owner = ownable::get_owner(&e).expect("OWNER_NOT_SET");
+
+        assert!(
+            is_from_investor || from == owner,
+            "FROM_ADDRESS_NOT_INVESTOR_OR_OWNER"
+        );
+
+        assert!(
+            is_to_investor || to == owner,
+            "TO_ADDRESS_NOT_INVESTOR_OR_OWNER"
+        );
+
+        // CHECK: nft_amount should be less than or equal to maximum allowed per transaction
+        let nft_amount = token_ids.len() as i128;
+
+        assert!(
+            nft_amount <= MAXIMUM_NFTS_PER_TRANSACTION,
+            "MAXIMUM_NFTS_PER_TRANSACTION_EXCEEDED"
+        );
+
+        // CHECK: from should have enough NFTs to sell
+        let from_balance = Self::balance(&e, from.clone());
+
+        assert!(
+            from_balance as i128 >= nft_amount,
+            "INSUFFICIENT_FROM_NFT_BALANCE"
+        );
+
+        // CHECK: to stablecoin balance should be enough to cover the buying fee
+        let stablecoin_address: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::StableCoin)
+            .expect("STABLECOIN_NOT_SET");
+
+        let price_per_nft = PRICE * STABLECOIN_SCALE as i128;
+        let total_price = nft_amount * price_per_nft;
+
+        let stablecoin_client = token::Client::new(&e, &stablecoin_address);
+
+        let to_balance = stablecoin_client.balance(&to);
+
+        assert!(
+            to_balance >= total_price,
+            "INSUFFICIENT_BALANCE_TO_BUY_NFTS"
+        );
+
+        // Get contract address
+        let current_address = e.current_contract_address();
+
+        // CHECK: to allowance should be enough to cover the buying fee
+        let to_allowance = stablecoin_client.allowance(&to, &current_address);
+
+        assert!(
+            to_allowance >= total_price,
+            "INSUFFICIENT_ALLOWANCE_TO_BUY_NFTS"
+        );
+
+        // DO: Trasnfer stablecoin total_price
+        stablecoin_client.transfer_from(&e.current_contract_address(), &to, &from, &total_price);
+
+        log!(
+            &e,
+            "Transferred {} stablecoins from {} to {}",
+            total_price,
+            to,
+            from
+        );
+
+        // DO: Transfer NFTs
+        Self::batch_transfer_from(&e, &current_address, &from, &to, token_ids);
+
+        // Emit TOKENS_BOUGHT event
+        emit_tokens_bought_event(&e, from, to, nft_amount as u32);
+    }
+
+    fn batch_transfer_from(
+        e: &Env,
+        spender: &Address,
+        from: &Address,
+        to: &Address,
+        token_ids: Vec<u32>,
+    ) {
+        spender.require_auth();
+
+        let has_spender_approval_for_all = Base::is_approved_for_all(e, from, spender);
+
+        assert!(has_spender_approval_for_all, "SPENDER_NOT_APPROVED_FOR_ALL");
+
+        for i in 0..token_ids.len() {
+            let token_id = token_ids.get(i).expect("Token id not found");
+            Consecutive::update(e, Some(from), Some(to), token_id);
+        }
+
+        emit_batch_transfer_event(e, from, to, token_ids);
+    }
+
     //////////////////////// TO DELETE FOR PROD ////////////////////////////////
 
     /// Sets a new receiver address. Only the contract owner can call this function.
@@ -630,6 +775,14 @@ impl Minah {
 #[contractimpl]
 impl NonFungibleToken for Minah {
     type ContractType = Consecutive;
+
+    fn transfer(_e: &Env, _from: Address, _to: Address, _token_id: u32) {
+        panic!("TRANSFERS_DISABLED_FOR_MINAH_NFTS");
+    }
+
+    fn transfer_from(_e: &Env, _spender: Address, _from: Address, _to: Address, _token_id: u32) {
+        panic!("TRANSFERS_DISABLED_FOR_MINAH_NFTS");
+    }
 }
 
 impl NonFungibleConsecutive for Minah {}
