@@ -8,7 +8,7 @@ stellar contract deploy \
   --alias minah_1 \
   -- \
   --owner $(stellar keys address alice) \
-  --stablecoin GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5 \
+  --stablecoin CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA \
   --receiver $(stellar keys address alice) \
   --payer $(stellar keys address alice)
 ```
