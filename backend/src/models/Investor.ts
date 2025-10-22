@@ -26,6 +26,7 @@ const InvestorSchema: Schema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      index: true,
     },
     firstName: {
       type: String,
@@ -54,9 +55,5 @@ const InvestorSchema: Schema = new Schema(
     timestamps: true,
   }
 );
-
-// Index for faster queries
-InvestorSchema.index({ email: 1 });
-InvestorSchema.index({ stellarAddress: 1 });
 
 export const Investor = mongoose.model<IInvestor>("Investor", InvestorSchema);
