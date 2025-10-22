@@ -73,9 +73,10 @@ fn emit_batch_transfer_event(e: &Env, from: &Address, to: &Address, token_ids: V
 pub struct Minah;
 
 // Constants
+const STABLECOIN_DECIMALS: u32 = 7;
 const TOTAL_SUPPLY: u32 = 4500;
 const PRICE: i128 = 1; // TODO: change to 455 for production
-const STABLECOIN_SCALE: u32 = 10u32.pow(6);
+const STABLECOIN_SCALE: u32 = 10u32.pow(STABLECOIN_DECIMALS);
 // Maximum NFTs allowed per transaction during marketplace operations (transfers)
 const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
 
@@ -93,11 +94,11 @@ const DISTRIBUTION_INTERVALS: [u64; 10] = [
     110_376_000, // 3 years 6 months
 ];
 
-// ROI percentages are scaled by 1_000_000 to handle decimal percentages
+// ROI percentages are scaled by 10_000_000 to handle decimal percentages (7 decimal places)
 // ROI_PERCENTAGES = [4, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67]
 const ROI_PERCENTAGES: [i128; 10] = [
-    4_000_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000, 2_670_000,
-    2_670_000, 2_670_000,
+    40_000_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000,
+    26_700_000, 26_700_000,
 ];
 
 #[contractimpl]
@@ -194,6 +195,7 @@ impl Minah {
         // User should authorize this call
         user.require_auth();
 
+        // LOG: Minting amount NFTs to user
         log!(&e, "Minting {} NFTs to {}", amount, user);
 
         // CHECK: Amount should be >= 40
@@ -366,7 +368,7 @@ impl Minah {
     /// Calculate amount to release for a given percentage
     /// Function to know how much to approve() on the STABLECOIN smart contract before releasing the amount to all investors.
     /// Arguments:
-    /// * `percentage`: the percentage of ROI to be released for the current stage.(Scaled by 1_000_000 to handle decimal percentages)
+    /// * `percentage`: the percentage of ROI to be released for the current stage.(Scaled by 10_000_000 to handle decimal percentages)
     pub fn calculate_amount_to_release(e: Env, percent: i128) -> i128 {
         let investors: Vec<Address> = e
             .storage()
@@ -468,7 +470,7 @@ impl Minah {
     /// Internal distribution function
     /// The function called from releaseDistribution() and used to distribute to investors what they earned during the current period/stage.
     /// Arguments:
-    /// * `percent`: the percentage of ROI to be released for the current stage.(Scaled by 1_000_000 to handle decimal percentages)
+    /// * `percent`: the percentage of ROI to be released for the current stage.(Scaled by 10_000_000 to handle decimal percentages)
     fn distribute(e: &Env, percent: i128) {
         // CHECK: State should not be Ended
         let state: InvestmentStatus = e
