@@ -136,8 +136,10 @@ class StellarService {
   async hello(to: string): Promise<string> {
     try {
       const contract = new MinahClient.Client({
-        ...MinahClient.networks.testnet,
-        rpcUrl: "https://soroban-testnet.stellar.org:443",
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
       });
 
       const { result } = await contract.hello({ to });

@@ -7,6 +7,7 @@ import {
   Spec as ContractSpec,
 } from "@stellar/stellar-sdk/contract";
 import type { u32, u64, i128, Option } from "@stellar/stellar-sdk/contract";
+import { CONFIG } from ".";
 export * from "@stellar/stellar-sdk";
 export * as contract from "@stellar/stellar-sdk/contract";
 export * as rpc from "@stellar/stellar-sdk/rpc";
@@ -14,7 +15,11 @@ export * as rpc from "@stellar/stellar-sdk/rpc";
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CDZ3QUUC4RN3LJKLGY44H75RQBLSIFQ3QAFE3KNNRY4WKG6JF723NSMG",
+    contractId: CONFIG.stellar.contractId,
+  },
+  mainnet: {
+    networkPassphrase: "Public Global Stellar Network ; September 2015",
+    contractId: CONFIG.stellar.contractId,
   },
 } as const;
 
