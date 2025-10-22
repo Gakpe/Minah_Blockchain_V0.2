@@ -8,6 +8,7 @@ import {
   rpc as StellarRpc,
 } from "@stellar/stellar-sdk";
 import { CONFIG } from "../config";
+import * as MinahClient from "../config/minah";
 
 class StellarService {
   private server: StellarRpc.Server;
@@ -132,9 +133,18 @@ class StellarService {
    * The contract method signature in Rust is: hello(env, to: String) -> Vec<String>
    * We'll call it with a single string and return the array of strings.
    */
-  async hello(_to: string): Promise<string[]> {
+  async hello(to: string): Promise<string> {
     try {
-      return ["OK"];
+      const contract = new MinahClient.Client({
+        ...MinahClient.networks.testnet,
+        rpcUrl: "https://soroban-testnet.stellar.org:443",
+      });
+
+      const { result } = await contract.hello({ to });
+
+      const greeting = result.join(" ");
+
+      return greeting;
     } catch (error) {
       console.error("Error calling hello on Stellar:", error);
       throw error;
