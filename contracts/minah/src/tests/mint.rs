@@ -1,7 +1,7 @@
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 use crate::{
-    tests::utils::{create_client, deploy_stablecoin_contract, mint_nft},
+    tests::utils::{create_client, deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
     Minah, MinahClient,
 };
 
@@ -70,7 +70,7 @@ fn test_mint_nft_insufficient_allowance() {
     // Transfer The Required Stablecoin Amount to the nft receiver so that the minting can proceed
     let nft_price = client.get_nft_price();
 
-    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(6);
+    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(USDC_DECIMALS);
 
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 
@@ -116,7 +116,7 @@ fn test_mint_nft() {
     // Transfer The Required Stablecoin Amount to the nft receiver so that the minting can proceed
     let nft_price = client.get_nft_price();
 
-    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(6);
+    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(USDC_DECIMALS);
 
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 

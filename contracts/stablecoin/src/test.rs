@@ -24,7 +24,7 @@ fn test_deploy_stablecoin() {
 
     let expected_name = String::from_str(&env, "USDC Mock Token");
     let expected_symbol = String::from_str(&env, "USDC");
-    let expected_decimals = 6u32;
+    let expected_decimals = 7u32;
     let expected_user_balance = premint_amount;
 
     assert_eq!(name, expected_name);

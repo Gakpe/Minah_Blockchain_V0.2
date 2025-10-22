@@ -1,4 +1,4 @@
-use crate::tests::utils::{create_client, deploy_stablecoin_contract};
+use crate::tests::utils::{create_client, deploy_stablecoin_contract, USDC_DECIMALS};
 use soroban_sdk::{testutils::Address as _, vec, Address, Env, String};
 use stablecoin::StablecoinClient;
 
@@ -135,7 +135,7 @@ fn test_deploy_mock_stablecoin() {
     let env = Env::default();
 
     let owner = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000000);
     let stablecoin_client = StablecoinClient::new(&env, &stablecoin_address);
 
     // Verify metadata
@@ -145,7 +145,7 @@ fn test_deploy_mock_stablecoin() {
 
     let expected_name = String::from_str(&env, "USDC Mock Token");
     let expected_symbol = String::from_str(&env, "USDC");
-    let expected_decimals = 6u32;
+    let expected_decimals = USDC_DECIMALS;
 
     assert_eq!(name, expected_name);
     assert_eq!(symbol, expected_symbol);

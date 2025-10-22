@@ -5,7 +5,7 @@ use soroban_sdk::{
 };
 
 use crate::{
-    tests::utils::{deploy_stablecoin_contract, mint_nft},
+    tests::utils::{deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
     InvestmentStatus, Minah, MinahClient, DISTRIBUTION_INTERVALS, ROI_PERCENTAGES,
 };
 
@@ -188,7 +188,7 @@ fn test_release_distribution() {
     // Total ROI amount to be transferred over time for 100 NFTs:
     // (100 NFTs * PRICE * 28.03% of investment) = 100 * 1 * 28.03 / 100 = 28.03 stablecoins worth of value.
     // Scaled: 28.03 * stablecoin_scale
-    let stablecoin_scale: i128 = 10i128.pow(6); // 6 decimals
+    let stablecoin_scale: i128 = 10i128.pow(USDC_DECIMALS); // 7 decimals
     let max_roi_amount_f64 = 28.03 * stablecoin_scale as f64;
     let max_roi_amount = max_roi_amount_f64 as i128;
 
@@ -231,7 +231,7 @@ fn test_release_distribution() {
     let perceent_0 = ROI_PERCENTAGES[0];
     let amount_to_release_0 = client.calculate_amount_to_release(&perceent_0);
     let expected_amount_to_release_0: i128 =
-        (nft_amount_1 as i128 * client.get_nft_price() * perceent_0 / 100);
+        nft_amount_1 as i128 * client.get_nft_price() * perceent_0 / 100;
 
     assert_eq!(amount_to_release_0, expected_amount_to_release_0);
 
@@ -262,7 +262,7 @@ fn test_release_distribution() {
     let perceent_1 = ROI_PERCENTAGES[1];
     let amount_to_release_1 = client.calculate_amount_to_release(&perceent_1);
     let expected_amount_to_release_1: i128 =
-        (nft_amount_1 as i128 * client.get_nft_price() * perceent_1 / 100);
+        nft_amount_1 as i128 * client.get_nft_price() * perceent_1 / 100;
 
     assert_eq!(amount_to_release_1, expected_amount_to_release_1);
 

@@ -23,6 +23,8 @@ pub fn deploy_stablecoin_contract(env: &Env, user: &Address, premint_amount: i12
     contract_id
 }
 
+pub const USDC_DECIMALS: u32 = 7;
+
 pub fn mint_nft(
     env: &Env,
     client: &MinahClient,
@@ -42,7 +44,7 @@ pub fn mint_nft(
     // Transfer The Required Stablecoin Amount to the nft receiver so that the minting can proceed
     let nft_price = client.get_nft_price();
 
-    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(6);
+    let total_amount = nft_price * (nft_amount as i128) * 10i128.pow(USDC_DECIMALS);
 
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 
