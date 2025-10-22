@@ -5,6 +5,7 @@ import { swaggerSpec, swaggerUiOptions } from "./config/swagger";
 import investorRoutes from "./routes/investor.routes";
 import helloRoutes from "./routes/hello.routes";
 import chronometerRoutes from "./routes/chronometer.routes";
+import releaseRoutes from "./routes/release.routes";
 
 const app = express();
 
@@ -32,5 +33,6 @@ app.get("/health", (_req, res) => {
 app.use("/api/investors", investorRoutes);
 app.use("/api/hello", helloRoutes);
 app.use("/api/start_chronometer", chronometerRoutes);
+app.use("/api/release", releaseRoutes);
 
 export default app;
