@@ -81,17 +81,32 @@ const STABLECOIN_SCALE: u32 = 10u32.pow(STABLECOIN_DECIMALS);
 const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
 
 // Distribution intervals in seconds
+// TODO: UNCOMMENT FOR PRODUCTION
+// const DISTRIBUTION_INTERVALS: [u64; 10] = [
+//     15_768_000,  // 6 months
+//     26_280_000,  // 10 months
+//     36_792_000,  // 1 year 2 months
+//     47_304_000,  // 1 year 6 months
+//     57_816_000,  // 1 year 10 months
+//     68_328_000,  // 2 years 2 months
+//     78_840_000,  // 2 years 6 months
+//     89_352_000,  // 2 years 10 months
+//     99_864_000,  // 3 years 2 months
+//     110_376_000, // 3 years 6 months
+// ];
+
+// TODO: COMMENT FOR PRODUCTION
 const DISTRIBUTION_INTERVALS: [u64; 10] = [
-    15_768_000,  // 6 months
-    26_280_000,  // 10 months
-    36_792_000,  // 1 year 2 months
-    47_304_000,  // 1 year 6 months
-    57_816_000,  // 1 year 10 months
-    68_328_000,  // 2 years 2 months
-    78_840_000,  // 2 years 6 months
-    89_352_000,  // 2 years 10 months
-    99_864_000,  // 3 years 2 months
-    110_376_000, // 3 years 6 months
+    60,  // 1 minute
+    120, // 2 minutes
+    180, // 3 minutes
+    240, // 4 minutes
+    300, // 5 minutes
+    360, // 6 minutes
+    420, // 7 minutes
+    480, // 8 minutes
+    540, // 9 minutes
+    600, // 10 minutes
 ];
 
 // ROI percentages are scaled by 10_000_000 to handle decimal percentages (7 decimal places)
