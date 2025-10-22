@@ -12,7 +12,7 @@ impl Stablecoin {
     pub fn __constructor(e: &Env, user: Address, premint_amount: i128) {
         Base::set_metadata(
             e,
-            6u32,
+            7u32,
             String::from_str(e, "USDC Mock Token"),
             String::from_str(e, "USDC"),
         );

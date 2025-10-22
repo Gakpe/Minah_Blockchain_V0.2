@@ -1,13 +1,8 @@
-use soroban_sdk::{
-    log,
-    testutils::{Address as _, Ledger},
-    Address, Env, Vec,
-};
+use soroban_sdk::{testutils::Address as _, Address, Env, Vec};
 
 use crate::{
-    tests::utils::{deploy_stablecoin_contract, mint_nft},
-    InvestmentStatus, Minah, MinahClient, DISTRIBUTION_INTERVALS, PRICE, ROI_PERCENTAGES,
-    TOTAL_SUPPLY,
+    tests::utils::{deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
+    Minah, MinahClient, PRICE, TOTAL_SUPPLY,
 };
 
 #[test]
@@ -54,7 +49,8 @@ fn test_transfer_nft() {
 fn test_buy_tokens() {
     let env = Env::default();
     let owner = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6)); // Ensure huge supply
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS)); // Ensure huge supply
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
@@ -110,7 +106,7 @@ fn test_buy_tokens() {
     }
 
     // Investor 2 approves the contract to spend stablecoins on his behalf
-    let total_price_in_stablecoin: i128 = 50 * PRICE * 10i128.pow(6); // 50 NFTs
+    let total_price_in_stablecoin: i128 = 50 * PRICE * 10i128.pow(USDC_DECIMALS); // 50 NFTs
 
     stablecoin_client.approve(&investor2, &contract_id, &total_price_in_stablecoin, &100);
 
@@ -138,7 +134,8 @@ fn test_buy_tokens() {
 fn test_sell_tokens() {
     let env = Env::default();
     let owner = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6)); // Ensure huge supply
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS)); // Ensure huge supply
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
@@ -194,7 +191,7 @@ fn test_sell_tokens() {
     }
 
     // Investor 2 approves the contract to spend stablecoins on his behalf
-    let total_price_in_stablecoin: i128 = 50 * PRICE * 10i128.pow(6); // 50 NFTs
+    let total_price_in_stablecoin: i128 = 50 * PRICE * 10i128.pow(USDC_DECIMALS); // 50 NFTs
 
     stablecoin_client.approve(&investor2, &contract_id, &total_price_in_stablecoin, &100);
 
