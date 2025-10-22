@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { stellarService } from "../services/stellar.service";
+import { formatUnits, parseUnits } from "viem";
+import { CONFIG } from "../config";
 
 /**
  * @swagger
@@ -91,11 +93,13 @@ export const calculateAmountToRelease = async (
       return;
     }
 
-    // Scale percent by 1,000,000 for precision
-    const scaledPercent = Math.floor(percent * 1_000_000);
-
+    // Scale percent by 10,000,000 for precision
+    const scaledPercent = parseUnits(
+      percent.toString(),
+      CONFIG.stellar.usdc.decimals
+    );
     // Calculate amount on Stellar blockchain
-    let amount: string;
+    let amount: bigint;
     try {
       amount = await stellarService.calculateAmountToRelease(scaledPercent);
     } catch (stellarError: any) {
@@ -109,13 +113,13 @@ export const calculateAmountToRelease = async (
     }
 
     // Descale amount back to normal
-    const descaledAmount = Math.floor(Number(amount) / 1_000_000);
+    const descaledAmount = formatUnits(amount, CONFIG.stellar.usdc.decimals);
 
     res.status(200).json({
       success: true,
       message: "Amount calculated successfully",
       data: {
-        amount: descaledAmount.toString(),
+        amount: descaledAmount,
       },
     });
   } catch (error: any) {

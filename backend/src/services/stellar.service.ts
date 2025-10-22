@@ -253,7 +253,7 @@ class StellarService {
    * @param percent - The percentage of ROI to be released (scaled by 1,000,000)
    * @returns The amount to release as a string
    */
-  async calculateAmountToRelease(percent: number): Promise<string> {
+  async calculateAmountToRelease(percent: bigint): Promise<bigint> {
     try {
       const contract = new MinahClient.Client({
         ...(this.network === "testnet"
@@ -263,10 +263,10 @@ class StellarService {
       });
 
       const { result } = await contract.calculate_amount_to_release({
-        percent: BigInt(percent),
+        percent: percent,
       });
 
-      return result.toString();
+      return result;
     } catch (error) {
       console.error(
         "Error calling calculate_amount_to_release on Stellar:",
@@ -380,9 +380,8 @@ class StellarService {
   async mintNFT(userAddress: string, amount: number): Promise<string> {
     try {
       // USDC contract address with 7 decimals
-      const USDC_CONTRACT_ADDRESS =
-        "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
-      const USDC_DECIMALS = 7;
+      const USDC_CONTRACT_ADDRESS = CONFIG.stellar.usdc.contractId;
+      const USDC_DECIMALS = CONFIG.stellar.usdc.decimals;
 
       if (!CONFIG.stellar.mintSecretKey) {
         throw new Error("STELLAR_MINT_SECRET_KEY not configured");
@@ -418,8 +417,8 @@ class StellarService {
       const mintAccount = await this.server.getAccount(mintAddress);
 
       const asset = new MinahClient.Asset(
-        "USDC",
-        "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+        CONFIG.stellar.usdc.asset_code,
+        CONFIG.stellar.usdc.asset_issuer
       );
 
       const entry = await this.server.getTrustline(
