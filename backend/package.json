@@ -4,6 +4,7 @@
   "description": "Backend API for Minah - Stellar-based investment platform",
   "main": "dist/server.js",
   "scripts": {
+    "mint": "ts-node src/mint.ts",
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "tsc && node dist/server.js",
@@ -29,7 +30,8 @@
     "express": "^5.1.0",
     "mongoose": "^8.19.2",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "viem": "^2.38.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

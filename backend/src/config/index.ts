@@ -14,5 +14,7 @@ export const CONFIG = {
     contractId: process.env.MINAH_CONTRACT_ID || "",
     ownerSecretKey: process.env.STELLAR_OWNER_SECRET_KEY || "",
     ownerPublicKey: process.env.STELLAR_OWNER_PUBLIC_KEY || "",
+    mintSecretKey: process.env.STELLAR_MINT_SECRET_KEY || "",
+    mintPublicKey: process.env.STELLAR_MINT_PUBLIC_KEY || "",
   },
 };

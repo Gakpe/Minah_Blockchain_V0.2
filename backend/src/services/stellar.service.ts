@@ -6,9 +6,11 @@ import {
   BASE_FEE,
   Networks,
   rpc as StellarRpc,
+  nativeToScVal,
 } from "@stellar/stellar-sdk";
 import { CONFIG } from "../config";
 import * as MinahClient from "../config/minah";
+import { parseUnits } from "viem";
 
 class StellarService {
   private server: StellarRpc.Server;
@@ -365,6 +367,169 @@ class StellarService {
       // Catch and report any errors we've thrown
       console.log("Sending transaction failed");
       console.log(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mint NFT with approval and balance checking
+   * @param userAddress - The Stellar address of the user to mint to
+   * @param amount - The number of NFTs to mint
+   * @returns Transaction hash
+   */
+  async mintNFT(userAddress: string, amount: number): Promise<string> {
+    try {
+      // USDC contract address with 7 decimals
+      const USDC_CONTRACT_ADDRESS =
+        "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+      const USDC_DECIMALS = 7;
+
+      if (!CONFIG.stellar.mintSecretKey) {
+        throw new Error("STELLAR_MINT_SECRET_KEY not configured");
+      }
+
+      const mintKeypair = Keypair.fromSecret(CONFIG.stellar.mintSecretKey);
+      const mintAddress = mintKeypair.publicKey();
+
+      console.log(`Minting ${amount} NFT(s) to ${userAddress}`);
+      console.log(`Mint account: ${mintAddress}`);
+
+      // Get NFT price from contract
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result: nftPriceB } = await contract.get_nft_price();
+      const nftPrice = Number(nftPriceB);
+      const totalCost = nftPrice * amount;
+      const parsedTotalCost = parseUnits(totalCost.toString(), USDC_DECIMALS);
+
+      console.log(`NFT Price: ${nftPrice} USDC)`);
+
+      console.log(
+        `Total cost: ${totalCost} (${parsedTotalCost.toString()} USDC)`
+      );
+
+      // Check USDC balance of mint account
+      const usdcContract = new Contract(USDC_CONTRACT_ADDRESS);
+      const mintAccount = await this.server.getAccount(mintAddress);
+
+      const asset = new MinahClient.Asset(
+        "USDC",
+        "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+      );
+
+      const entry = await this.server.getTrustline(
+        mintAccount.accountId(),
+        asset
+      );
+
+      let usdcBalance = BigInt(entry?.balance().toString()) || 0n;
+
+      console.log(`USDC Balance: ${usdcBalance}`);
+
+      console.log("Checking mint account balance...");
+
+      if (usdcBalance < parsedTotalCost) {
+        throw new Error(
+          `Insufficient balance. Required: ${totalCost}, Available: ${usdcBalance}`
+        );
+      }
+
+      console.log("Balance sufficient, proceeding with minting...");
+
+      // Approve the contract to spend USDC
+      console.log("Approving contract to spend USDC...");
+      const approveOperation = usdcContract.call(
+        "approve",
+        Address.fromString(mintAddress).toScVal(),
+        Address.fromString(this.contractId).toScVal(),
+        nativeToScVal(parsedTotalCost, { type: "i128" }),
+        nativeToScVal(2187080, { type: "u32" }) // live_until_ledger
+      );
+
+      const approveAccount = await this.server.getAccount(mintAddress);
+      const approveTransaction = new TransactionBuilder(approveAccount, {
+        fee: BASE_FEE,
+        networkPassphrase:
+          this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC,
+      })
+        .addOperation(approveOperation)
+        .setTimeout(30)
+        .build();
+
+      const preparedApproveTransaction =
+        await this.server.prepareTransaction(approveTransaction);
+
+      preparedApproveTransaction.sign(mintKeypair);
+
+      const approveResponse = await this.server.sendTransaction(
+        preparedApproveTransaction
+      );
+
+      // Wait for approval transaction
+      let approveResult = await this.server.getTransaction(
+        approveResponse.hash
+      );
+      while (approveResult.status === "NOT_FOUND") {
+        console.log("Waiting for approval confirmation...");
+        approveResult = await this.server.getTransaction(approveResponse.hash);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      if (approveResult.status !== "SUCCESS") {
+        throw new Error(`Failed to approve: ${approveResult.resultXdr}`);
+      }
+
+      console.log(`Approval successful: ${approveResponse.hash}`);
+
+      // Now mint the NFT
+      console.log("Minting NFT...");
+      const mintOperation = new Contract(this.contractId).call(
+        "mint",
+        Address.fromString(userAddress).toScVal(),
+        nativeToScVal(amount, { type: "u32" })
+      );
+
+      const mintAccountForMint = await this.server.getAccount(mintAddress);
+      const mintTransaction = new TransactionBuilder(mintAccountForMint, {
+        fee: BASE_FEE,
+        networkPassphrase:
+          this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC,
+      })
+        .addOperation(mintOperation)
+        .setTimeout(30)
+        .build();
+
+      const preparedMintTransaction =
+        await this.server.prepareTransaction(mintTransaction);
+
+      preparedMintTransaction.sign(mintKeypair);
+
+      const mintResponse = await this.server.sendTransaction(
+        preparedMintTransaction
+      );
+
+      // Wait for mint transaction
+      let mintResult = await this.server.getTransaction(mintResponse.hash);
+      while (mintResult.status === "NOT_FOUND") {
+        console.log("Waiting for mint confirmation...");
+        mintResult = await this.server.getTransaction(mintResponse.hash);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      if (mintResult.status !== "SUCCESS") {
+        throw new Error(`Failed to mint: ${mintResult.resultXdr}`);
+      }
+
+      console.log(`Mint successful: ${mintResponse.hash}`);
+      return mintResponse.hash;
+    } catch (error) {
+      console.error("Minting failed");
+      console.error(JSON.stringify(error));
       throw error;
     }
   }
