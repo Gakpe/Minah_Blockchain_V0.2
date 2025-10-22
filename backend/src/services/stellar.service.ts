@@ -282,14 +282,69 @@ class StellarService {
    */
   async releaseDistribution(): Promise<string> {
     try {
-      // Build the contract invocation
+      // USDC contract address
+      const USDC_CONTRACT_ADDRESS = CONFIG.stellar.usdc.contractId;
+      const ownerAddress = this.ownerKeypair.publicKey();
+
+      console.log("Starting release distribution...");
+      console.log(`Owner account: ${ownerAddress}`);
+
+      // Approve the contract to spend a very large amount of USDC
+      // Using i128 max value to ensure contract can always transfer needed amounts
+      const APPROVE_AMOUNT = BigInt("170141183460469231731687303715884105727"); // i128::MAX
+
+      console.log("Approving contract to spend USDC...");
+      const usdcContract = new Contract(USDC_CONTRACT_ADDRESS);
+      const approveOperation = usdcContract.call(
+        "approve",
+        Address.fromString(ownerAddress).toScVal(),
+        Address.fromString(this.contractId).toScVal(),
+        nativeToScVal(APPROVE_AMOUNT, { type: "i128" }),
+        nativeToScVal(2187080, { type: "u32" }) // live_until_ledger
+      );
+
+      const approveAccount = await this.server.getAccount(ownerAddress);
+      const approveTransaction = new TransactionBuilder(approveAccount, {
+        fee: BASE_FEE,
+        networkPassphrase:
+          this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC,
+      })
+        .addOperation(approveOperation)
+        .setTimeout(30)
+        .build();
+
+      const preparedApproveTransaction =
+        await this.server.prepareTransaction(approveTransaction);
+
+      preparedApproveTransaction.sign(this.ownerKeypair);
+
+      const approveResponse = await this.server.sendTransaction(
+        preparedApproveTransaction
+      );
+
+      // Wait for approval transaction
+      let approveResult = await this.server.getTransaction(
+        approveResponse.hash
+      );
+      while (approveResult.status === "NOT_FOUND") {
+        console.log("Waiting for approval confirmation...");
+        approveResult = await this.server.getTransaction(approveResponse.hash);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      if (approveResult.status !== "SUCCESS") {
+        throw new Error(`Failed to approve: ${approveResult.resultXdr}`);
+      }
+
+      console.log(`Approval successful: ${approveResponse.hash}`);
+
+      // Now proceed with release distribution
+      console.log("Calling release_distribution...");
       const contract = new Contract(this.contractId);
 
       // Transactions require a valid sequence number (which varies from one
       // account to another). We fetch this sequence number from the RPC server.
-      const ownerAccount = await this.server.getAccount(
-        this.ownerKeypair.publicKey()
-      );
+      const ownerAccount = await this.server.getAccount(ownerAddress);
 
       // Prepare the release_distribution function call
       const operation = contract.call("release_distribution");
@@ -362,6 +417,7 @@ class StellarService {
         );
       }
 
+      console.log(`Release distribution successful: ${sendResponse.hash}`);
       return sendResponse.hash;
     } catch (error) {
       // Catch and report any errors we've thrown

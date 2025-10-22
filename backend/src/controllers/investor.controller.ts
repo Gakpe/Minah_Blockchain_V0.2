@@ -24,7 +24,7 @@ import { stellarService } from "../services/stellar.service";
  *               stellarAddress:
  *                 type: string
  *                 description: Stellar blockchain address
- *                 example: "GALXBNO5FE4BGADFPNHNLOKCEHD6B7CBVE57BN6AXQQY5EYK4Q7IYTGM"
+ *                 example: "GAOLV5BREHSMYOJ6GXNMJGZH2RKHYJLP7ATOU7RZQYVAM42FSSHTLLRS"
  *               email:
  *                 type: string
  *                 format: email
