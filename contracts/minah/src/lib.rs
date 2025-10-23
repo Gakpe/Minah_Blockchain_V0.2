@@ -403,7 +403,7 @@ impl Minah {
             total_invested_nfts += balance;
         }
 
-        ((total_invested_nfts * percent) / 100) * PRICE
+        total_invested_nfts * PRICE * percent / 100
     }
 
     /// Releases the distribution for the current stage.
