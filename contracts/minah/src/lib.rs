@@ -79,6 +79,10 @@ const PRICE: i128 = 1; // TODO: change to 455 for production
 const STABLECOIN_SCALE: u32 = 10u32.pow(STABLECOIN_DECIMALS);
 // Maximum NFTs allowed per transaction during marketplace operations (transfers)
 const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
+// Maximum NFTs allowed per investor
+const MAX_NFTS_PER_INVESTOR: u32 = 150;
+// Minimum NFTs to mint at once
+const MIN_NFTS_TO_MINT: u32 = 40;
 
 // Distribution intervals in seconds
 // TODO: UNCOMMENT FOR PRODUCTION
@@ -213,8 +217,8 @@ impl Minah {
         // LOG: Minting amount NFTs to user
         log!(&e, "Minting {} NFTs to {}", amount, user);
 
-        // CHECK: Amount should be >= 40
-        assert!(amount >= 40, "MINIMUM_INVESTMENT_NOT_MET");
+        // CHECK: Amount should be >= MIN_NFTS_TO_MINT
+        assert!(amount >= MIN_NFTS_TO_MINT, "MINIMUM_INVESTMENT_NOT_MET");
 
         // CHECK: Current state should be BuyingPhase
         let current_state: InvestmentStatus = e
@@ -248,11 +252,11 @@ impl Minah {
 
         assert!(new_supply <= TOTAL_SUPPLY, "MAXIMUM_SUPPLY_EXCEEDED");
 
-        // CHECK: Investor NFTS should not exceed 150
+        // CHECK: Investor NFTS should not exceed MAX_NFTS_PER_INVESTOR
         let investor_balance = Self::balance(&e, user.clone());
 
         assert!(
-            investor_balance + amount <= 150,
+            investor_balance + amount <= MAX_NFTS_PER_INVESTOR,
             "MAXIMUM_NFTS_PER_INVESTOR_EXCEEDED"
         );
 
@@ -293,7 +297,7 @@ impl Minah {
 
         assert!(user_balance >= usd_amount, "INSUFFICIENT_BALANCE");
 
-        // CHECK: User has enough balance of stablecoin
+        // CHECK: User has enough allowance of stablecoin
         let current_address = e.current_contract_address();
 
         let user_allowance = stablecoin_client.allowance(&user, &current_address);
