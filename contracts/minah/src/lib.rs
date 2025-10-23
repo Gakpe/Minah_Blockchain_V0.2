@@ -524,8 +524,7 @@ impl Minah {
 
         let current_address = e.current_contract_address();
 
-        for i in 0..investors.len() {
-            let investor = investors.get(i).unwrap();
+        for investor in investors.iter() {
             let balance = Base::balance(&e, &investor) as i128;
             let investor_amount = ((balance * percent) / 100) * PRICE;
 
