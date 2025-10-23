@@ -79,6 +79,10 @@ const PRICE: i128 = 1; // TODO: change to 455 for production
 const STABLECOIN_SCALE: u32 = 10u32.pow(STABLECOIN_DECIMALS);
 // Maximum NFTs allowed per transaction during marketplace operations (transfers)
 const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
+// Maximum NFTs allowed per investor
+const MAX_NFTS_PER_INVESTOR: u32 = 150;
+// Minimum NFTs to mint at once
+const MIN_NFTS_TO_MINT: u32 = 40;
 
 // Distribution intervals in seconds
 // TODO: UNCOMMENT FOR PRODUCTION
@@ -213,8 +217,8 @@ impl Minah {
         // LOG: Minting amount NFTs to user
         log!(&e, "Minting {} NFTs to {}", amount, user);
 
-        // CHECK: Amount should be >= 40
-        assert!(amount >= 40, "MINIMUM_INVESTMENT_NOT_MET");
+        // CHECK: Amount should be >= MIN_NFTS_TO_MINT
+        assert!(amount >= MIN_NFTS_TO_MINT, "MINIMUM_INVESTMENT_NOT_MET");
 
         // CHECK: Current state should be BuyingPhase
         let current_state: InvestmentStatus = e
@@ -248,11 +252,11 @@ impl Minah {
 
         assert!(new_supply <= TOTAL_SUPPLY, "MAXIMUM_SUPPLY_EXCEEDED");
 
-        // CHECK: Investor NFTS should not exceed 150
+        // CHECK: Investor NFTS should not exceed MAX_NFTS_PER_INVESTOR
         let investor_balance = Self::balance(&e, user.clone());
 
         assert!(
-            investor_balance + amount <= 150,
+            investor_balance + amount <= MAX_NFTS_PER_INVESTOR,
             "MAXIMUM_NFTS_PER_INVESTOR_EXCEEDED"
         );
 
@@ -293,7 +297,7 @@ impl Minah {
 
         assert!(user_balance >= usd_amount, "INSUFFICIENT_BALANCE");
 
-        // CHECK: User has enough balance of stablecoin
+        // CHECK: User has enough allowance of stablecoin
         let current_address = e.current_contract_address();
 
         let user_allowance = stablecoin_client.allowance(&user, &current_address);
@@ -391,17 +395,15 @@ impl Minah {
             .get(&DataKey::InvestorsArray)
             .expect("InvestorsArray not set");
 
-        let mut amount_to_release: i128 = 0;
+        let mut total_invested_nfts: i128 = 0;
 
-        for i in 0..investors.len() {
-            let investor = investors.get(i).expect("Investor not found");
+        for investor in investors.iter() {
             let balance = Base::balance(&e, &investor) as i128;
-            let investor_amount = ((balance * percent) / 100) * PRICE;
 
-            amount_to_release += investor_amount;
+            total_invested_nfts += balance;
         }
 
-        amount_to_release
+        total_invested_nfts * PRICE * percent / 100
     }
 
     /// Releases the distribution for the current stage.
@@ -522,8 +524,7 @@ impl Minah {
 
         let current_address = e.current_contract_address();
 
-        for i in 0..investors.len() {
-            let investor = investors.get(i).unwrap();
+        for investor in investors.iter() {
             let balance = Base::balance(&e, &investor) as i128;
             let investor_amount = ((balance * percent) / 100) * PRICE;
 
