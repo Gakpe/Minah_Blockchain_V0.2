@@ -293,6 +293,14 @@ class StellarService {
       // Using i128 max value to ensure contract can always transfer needed amounts
       const APPROVE_AMOUNT = BigInt("170141183460469231731687303715884105727"); // i128::MAX
 
+      const latestLedger = await this.server.getLatestLedger();
+
+      console.log(`Latest ledger: ${latestLedger}`);
+
+      const liveUntilLedger = latestLedger.sequence + 1_000_000; // valid for the next 1_000_000
+
+      console.log(`Live until ledger: ${liveUntilLedger}`);
+
       console.log("Approving contract to spend USDC...");
       const usdcContract = new Contract(USDC_CONTRACT_ADDRESS);
       const approveOperation = usdcContract.call(
@@ -300,7 +308,7 @@ class StellarService {
         Address.fromString(ownerAddress).toScVal(),
         Address.fromString(this.contractId).toScVal(),
         nativeToScVal(APPROVE_AMOUNT, { type: "i128" }),
-        nativeToScVal(2187080, { type: "u32" }) // live_until_ledger
+        nativeToScVal(liveUntilLedger, { type: "u32" }) // live_until_ledger
       );
 
       const approveAccount = await this.server.getAccount(ownerAddress);
@@ -496,6 +504,14 @@ class StellarService {
 
       console.log("Balance sufficient, proceeding with minting...");
 
+      const latestLedger = await this.server.getLatestLedger();
+
+      console.log(`Latest ledger: ${latestLedger}`);
+
+      const liveUntilLedger = latestLedger.sequence + 1_000_000; // valid for the next 1_000_000
+
+      console.log(`Live until ledger: ${liveUntilLedger}`);
+
       // Approve the contract to spend USDC
       console.log("Approving contract to spend USDC...");
       const approveOperation = usdcContract.call(
@@ -503,7 +519,7 @@ class StellarService {
         Address.fromString(mintAddress).toScVal(),
         Address.fromString(this.contractId).toScVal(),
         nativeToScVal(parsedTotalCost, { type: "i128" }),
-        nativeToScVal(2187080, { type: "u32" }) // live_until_ledger
+        nativeToScVal(liveUntilLedger, { type: "u32" }) // live_until_ledger
       );
 
       const approveAccount = await this.server.getAccount(mintAddress);
