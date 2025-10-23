@@ -391,17 +391,15 @@ impl Minah {
             .get(&DataKey::InvestorsArray)
             .expect("InvestorsArray not set");
 
-        let mut amount_to_release: i128 = 0;
+        let mut total_invested_nfts: i128 = 0;
 
-        for i in 0..investors.len() {
-            let investor = investors.get(i).expect("Investor not found");
+        for investor in investors.iter() {
             let balance = Base::balance(&e, &investor) as i128;
-            let investor_amount = ((balance * percent) / 100) * PRICE;
 
-            amount_to_release += investor_amount;
+            total_invested_nfts += balance;
         }
 
-        amount_to_release
+        ((total_invested_nfts * percent) / 100) * PRICE
     }
 
     /// Releases the distribution for the current stage.
