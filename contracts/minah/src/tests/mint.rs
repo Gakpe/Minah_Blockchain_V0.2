@@ -1,7 +1,12 @@
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 use crate::{
-    tests::utils::{create_client, deploy_stablecoin_contract, mint_nft, USDC_DECIMALS}, Minah, MinahClient, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT, STABLECOIN_DECIMALS, TOTAL_SUPPLY
+    tests::{
+        mint,
+        utils::{create_client, deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
+    },
+    InvestmentStatus, Minah, MinahClient, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT,
+    STABLECOIN_DECIMALS, TOTAL_SUPPLY,
 };
 
 #[test]
@@ -372,4 +377,95 @@ fn test_exact_max_nfts_per_investor_boundary() {
 
     let balance = client.balance(&investor);
     assert_eq!(balance, MAX_NFTS_PER_INVESTOR);
+}
+
+#[test]
+#[should_panic(expected = "INVESTMENT_NOT_IN_BUYING_PHASE")]
+fn test_mint_in_wrong_state() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    let investor = Address::generate(&env);
+
+    // First mint some NFTs to have something to work with
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        50,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer to change state
+    client.start_chronometer();
+
+    // Verify state has changed
+    let state = client.get_current_state();
+    assert_eq!(state, InvestmentStatus::BeforeFirstRelease);
+
+    // Now try to mint - should panic
+    let new_investor = Address::generate(&env);
+    mint_nft(
+        &env,
+        &client,
+        &new_investor,
+        50,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+}
+
+#[test]
+fn test_start_chronometer_mints_remaining_to_owner() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    let investor = Address::generate(&env);
+    let minted_amount = 100u32;
+
+    // Mint some NFTs to investor
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        minted_amount,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Check current supply
+    assert_eq!(client.get_current_supply(), minted_amount);
+
+    // Owner should have 0 NFTs initially
+    let owner_balance_before = client.balance(&owner);
+    assert_eq!(owner_balance_before, 0);
+
+    // Start chronometer
+    client.start_chronometer();
+
+    // Check that total supply is now at maximum
+    assert_eq!(client.get_current_supply(), crate::TOTAL_SUPPLY);
+
+    // Owner should have received the remaining NFTs
+    let owner_balance_after = client.balance(&owner);
+    let expected_owner_balance = crate::TOTAL_SUPPLY - minted_amount;
+    assert_eq!(owner_balance_after, expected_owner_balance);
 }
