@@ -27,6 +27,10 @@ const swaggerDefinition = {
       name: "Vaults",
       description: "Vault management endpoints",
     },
+    {
+      name: "Release",
+      description: "ROI distribution release management endpoints",
+    },
   ],
   components: {
     schemas: {
