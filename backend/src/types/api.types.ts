@@ -80,6 +80,15 @@ export interface CreateInvestorResponse {
   transactionHash?: string;
 }
 
+export interface GetAllInvestorsResponse {
+  investors: InvestorResponse[];
+  count: number;
+}
+
+export interface GetInvestorCountResponse {
+  count: number;
+}
+
 export interface CreateVaultResponse {
   vault: VaultResponse;
 }

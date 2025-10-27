@@ -4,7 +4,7 @@ import { stellarService } from "../services/stellar.service";
 
 /**
  * @swagger
- * /api/investors:
+ * /api/investors/create:
  *   post:
  *     summary: Create a new investor
  *     description: Creates a new investor profile in MongoDB and optionally registers them on the Stellar blockchain
@@ -247,6 +247,149 @@ export const createInvestor = async (
     });
   } catch (error: any) {
     console.error("Error creating investor:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message || "An unexpected error occurred",
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/investors:
+ *   get:
+ *     summary: Get all investors
+ *     description: Retrieves a list of all investors from MongoDB
+ *     tags: [Investors]
+ *     responses:
+ *       200:
+ *         description: Investors retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Investors retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     investors:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Investor'
+ *                     count:
+ *                       type: number
+ *                       example: 10
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+export const getAllInvestors = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // Get all investors from MongoDB
+    const investors = await Investor.find({});
+
+    res.status(200).json({
+      success: true,
+      message: "Investors retrieved successfully",
+      data: {
+        investors: investors.map(investor => ({
+          id: investor._id,
+          autoFuel: investor.autoFuel,
+          walletAddress: investor.walletAddress,
+          InternalwalletAddress: investor.InternalwalletAddress,
+          vaultID: investor.vaultID,
+          issuer: investor.issuer,
+          nationality: investor.nationality,
+          first_name: investor.first_name,
+          last_name: investor.last_name,
+          address: investor.address,
+          profilePicture: investor.profilePicture,
+          email: investor.email,
+          investor: investor.investor,
+          loginCount: investor.loginCount,
+          accountVerified: investor.accountVerified,
+          totalAmountInvested: investor.totalAmountInvested,
+          amountInvested: investor.amountInvested,
+          lastLoginAt: investor.lastLoginAt,
+          createdAt: investor.createdAt,
+        })),
+        count: investors.length,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error retrieving investors:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message || "An unexpected error occurred",
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /api/investors/count:
+ *   get:
+ *     summary: Get investor count
+ *     description: Retrieves the total number of investors in the database
+ *     tags: [Investors]
+ *     responses:
+ *       200:
+ *         description: Investor count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Investor count retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: number
+ *                       example: 10
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+export const getInvestorCount = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // Get investor count from MongoDB
+    const count = await Investor.countDocuments({});
+
+    res.status(200).json({
+      success: true,
+      message: "Investor count retrieved successfully",
+      data: {
+        count,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error retrieving investor count:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
