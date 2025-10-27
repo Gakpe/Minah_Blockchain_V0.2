@@ -73,13 +73,6 @@ class StellarService {
       // Sign the transaction with the source account's keypair.
       preparedTransaction.sign(this.ownerKeypair);
 
-      // Let's see the base64-encoded XDR of the transaction we just built.
-      console.log(
-        `Signed prepared transaction XDR: ${preparedTransaction
-          .toEnvelope()
-          .toXDR("base64")}`
-      );
-
       let sendResponse = await this.server.sendTransaction(preparedTransaction);
       console.log(`Sent transaction: ${JSON.stringify(sendResponse)}`);
 
@@ -94,17 +87,13 @@ class StellarService {
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
 
-        console.log(`getTransaction response: ${JSON.stringify(getResponse)}`);
-
         if (getResponse.status === "SUCCESS") {
           // Make sure the transaction's resultMetaXDR is not empty
           if (!getResponse.resultMetaXdr) {
             throw "Empty resultMetaXDR in getTransaction response";
           }
-          // Find the return value from the contract and return it
-
-          let returnValue = getResponse.returnValue;
-          console.log(`Transaction result: ${returnValue?.value()}`);
+          // let returnValue = getResponse.returnValue;
+          // console.log(`Transaction result: ${returnValue?.value()}`);
         } else {
           throw `Transaction failed: ${getResponse.resultXdr}`;
         }
@@ -565,6 +554,11 @@ class StellarService {
         nativeToScVal(amount, { type: "u32" })
       );
 
+      // // Get the base64-encoded XDR string (similar to ethers encoded calldata)
+      // const xdrBase64 = mintOperation.toXDR("base64");
+
+      // console.log(`XDR: ${xdrBase64}`);
+
       const mintAccountForMint = await this.server.getAccount(mintAddress);
       const mintTransaction = new TransactionBuilder(mintAccountForMint, {
         fee: BASE_FEE,
@@ -601,6 +595,119 @@ class StellarService {
     } catch (error) {
       console.error("Minting failed");
       console.error(JSON.stringify(error));
+      throw error;
+    }
+  }
+
+  /**
+   * Get the current state of the investment from the contract
+   * @returns The current investment state
+   */
+  async getCurrentInvestmentState(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_current_state();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_current_state on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if the chronometer has started
+   * @returns boolean indicating if chronometer is started
+   */
+  async isChronometerStarted(): Promise<boolean> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.is_chronometer_started();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling is_chronometer_started on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the begin date of the chronometer
+   * @returns The begin date as a timestamp (u64)
+   */
+  async getChronometerBeginDate(): Promise<bigint> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_begin_date();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_begin_date on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the current supply of NFTs from the contract
+   * @returns The current NFT supply
+   */
+  async getCurrentNFTSupply(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_current_supply();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_current_supply on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the claimed amount for a specific investor
+   * @param investorAddress - The Stellar address of the investor
+   * @returns The claimed amount for the investor
+   */
+  async getInvestorClaimedAmount(investorAddress: string): Promise<bigint> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.see_claimed_amount({
+        investor: investorAddress,
+      });
+
+      return result;
+    } catch (error) {
+      console.error("Error calling see_claimed_amount on Stellar:", error);
       throw error;
     }
   }

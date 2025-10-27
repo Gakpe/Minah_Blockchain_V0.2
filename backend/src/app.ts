@@ -3,6 +3,8 @@ import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec, swaggerUiOptions } from "./config/swagger";
 import investorRoutes from "./routes/investor.routes";
+import vaultRoutes from "./routes/vault.routes";
+import investmentStateRoutes from "./routes/investment-state.routes";
 import helloRoutes from "./routes/hello.routes";
 import chronometerRoutes from "./routes/chronometer.routes";
 import releaseRoutes from "./routes/release.routes";
@@ -31,8 +33,10 @@ app.get("/health", (_req, res) => {
 
 // API Routes
 app.use("/api/investors", investorRoutes);
+app.use("/api/vaults", vaultRoutes);
+app.use("/api/investment-state", investmentStateRoutes);
 app.use("/api/hello", helloRoutes);
-app.use("/api/start_chronometer", chronometerRoutes);
+app.use("/api/chronometer", chronometerRoutes);
 app.use("/api/release", releaseRoutes);
 
 export default app;

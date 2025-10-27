@@ -5,24 +5,19 @@ import { CONFIG } from "../config";
 
 /**
  * @swagger
- * /api/release/calculate:
- *   post:
+ * /api/release/calculate/{percent}:
+ *   get:
  *     summary: Calculate amount to release for a given percentage
  *     description: Calculates the total amount to release for all investors based on a given ROI percentage
  *     tags: [Release]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - percent
- *             properties:
- *               percent:
- *                 type: number
- *                 description: The percentage of ROI to be released (scaled by 1,000,000 for precision)
- *                 example: 4
+ *     parameters:
+ *       - in: path
+ *         name: percent
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: The percentage of ROI to be released (scaled by 1,000,000 for precision)
+ *         example: 4
  *     responses:
  *       200:
  *         description: Amount calculated successfully
@@ -61,20 +56,23 @@ export const calculateAmountToRelease = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { percent } = req.body;
+    const { percent } = req.params;
 
     // Validation
     if (percent === undefined || percent === null) {
       res.status(400).json({
         success: false,
-        message: "Missing required field",
-        error: "percent is required",
+        message: "Missing required parameter",
+        error: "percent parameter is required",
       });
       return;
     }
 
+    // Convert percent to number
+    const percentNumber = parseFloat(percent);
+
     // Validate percent is a number
-    if (typeof percent !== "number" || isNaN(percent)) {
+    if (isNaN(percentNumber)) {
       res.status(400).json({
         success: false,
         message: "Invalid percent value",
@@ -84,7 +82,7 @@ export const calculateAmountToRelease = async (
     }
 
     // Validate percent is positive
-    if (percent < 0) {
+    if (percentNumber < 0) {
       res.status(400).json({
         success: false,
         message: "Invalid percent value",
@@ -95,7 +93,7 @@ export const calculateAmountToRelease = async (
 
     // Scale percent by 10,000,000 for precision
     const scaledPercent = parseUnits(
-      percent.toString(),
+      percentNumber.toString(),
       CONFIG.stellar.usdc.decimals
     );
     // Calculate amount on Stellar blockchain
