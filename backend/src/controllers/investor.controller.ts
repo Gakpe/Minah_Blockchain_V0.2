@@ -7,7 +7,7 @@ import { stellarService } from "../services/stellar.service";
  * /api/investors:
  *   post:
  *     summary: Create a new investor
- *     description: Creates a new investor profile in MongoDB and registers them on the Stellar blockchain
+ *     description: Creates a new investor profile in MongoDB and optionally registers them on the Stellar blockchain
  *     tags: [Investors]
  *     requestBody:
  *       required: true
@@ -15,26 +15,56 @@ import { stellarService } from "../services/stellar.service";
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - stellarAddress
- *               - email
- *               - firstName
- *               - lastName
  *             properties:
- *               stellarAddress:
+ *               autoFuel:
+ *                 type: boolean
+ *                 example: false
+ *               walletAddress:
  *                 type: string
- *                 description: Stellar blockchain address
  *                 example: "GAOLV5BREHSMYOJ6GXNMJGZH2RKHYJLP7ATOU7RZQYVAM42FSSHTLLRS"
+ *               InternalwalletAddress:
+ *                 type: string
+ *                 example: "GAOLV5BREHSMYOJ6GXNMJGZH2RKHYJLP7ATOU7RZQYVAM42FSSHTLLRS"
+ *               vaultID:
+ *                 type: string
+ *                 example: "vault_123"
+ *               issuer:
+ *                 type: string
+ *                 example: "Issuer Corp"
+ *               nationality:
+ *                 type: string
+ *                 example: "US"
+ *               first_name:
+ *                 type: string
+ *                 example: "Ayoub"
+ *               last_name:
+ *                 type: string
+ *                 example: "Buoya"
+ *               address:
+ *                 type: string
+ *                 example: "123 Main St, City, Country"
+ *               profilePicture:
+ *                 type: string
+ *                 example: "https://example.com/profile.jpg"
  *               email:
  *                 type: string
  *                 format: email
  *                 example: "ayoub@gmail.com"
- *               firstName:
+ *               investor:
+ *                 type: boolean
+ *                 example: true
+ *               loginCount:
+ *                 type: number
+ *                 example: 0
+ *               accountVerified:
+ *                 type: boolean
+ *                 example: false
+ *               lastLoginAt:
  *                 type: string
- *                 example: "Ayoub"
- *               lastName:
+ *                 format: date-time
+ *               createdAt:
  *                 type: string
- *                 example: "Buoya"
+ *                 format: date-time
  *     responses:
  *       201:
  *         description: Investor created successfully
@@ -76,41 +106,66 @@ export const createInvestor = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { stellarAddress, email, firstName, lastName } = req.body;
+    const {
+      autoFuel,
+      walletAddress,
+      InternalwalletAddress,
+      vaultID,
+      issuer,
+      nationality,
+      first_name,
+      last_name,
+      address,
+      profilePicture,
+      email,
+      investor,
+      loginCount,
+      accountVerified,
+      lastLoginAt,
+      createdAt,
+    } = req.body;
 
-    // Validation
-    if (!stellarAddress || !email || !firstName || !lastName) {
+    // Validate email format if provided
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid email format",
+        });
+        return;
+      }
+    }
+
+    // Validate Stellar address format if provided
+    if (walletAddress && !stellarService.validateAddress(walletAddress)) {
       res.status(400).json({
         success: false,
-        message: "Missing required fields",
-        error: "stellarAddress, email, firstName, and lastName are required",
+        message: "Invalid Stellar wallet address format",
       });
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (
+      InternalwalletAddress &&
+      !stellarService.validateAddress(InternalwalletAddress)
+    ) {
       res.status(400).json({
         success: false,
-        message: "Invalid email format",
-      });
-      return;
-    }
-
-    // Validate Stellar address format
-    if (!stellarService.validateAddress(stellarAddress)) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid Stellar address format",
+        message: "Invalid internal wallet address format",
       });
       return;
     }
 
     // Check if investor already exists in MongoDB
-    const existingInvestor = await Investor.findOne({
-      $or: [{ email }, { stellarAddress }],
-    });
+    let existingInvestor = null;
+    if (email || walletAddress) {
+      const query: any = { $or: [] };
+      if (email) query.$or.push({ email });
+      if (walletAddress) query.$or.push({ walletAddress });
+
+      existingInvestor = await Investor.findOne(query);
+    }
 
     if (existingInvestor) {
       res.status(409).json({
@@ -119,54 +174,73 @@ export const createInvestor = async (
         error:
           existingInvestor.email === email
             ? "Email already registered"
-            : "Stellar address already registered",
+            : "Wallet address already registered",
       });
       return;
     }
 
-    // Create investor on Stellar blockchain
-    let transactionHash: string;
-    try {
-      transactionHash = await stellarService.createInvestor(stellarAddress);
-    } catch (stellarError: any) {
-      console.error("Stellar transaction error:", stellarError);
-      res.status(500).json({
-        success: false,
-        message: "Failed to create investor on blockchain",
-        error: stellarError.message || "Stellar transaction failed",
-      });
-      return;
+    // Create investor on Stellar blockchain if wallet address is provided
+    let transactionHash: string | undefined;
+    if (walletAddress) {
+      try {
+        transactionHash = await stellarService.createInvestor(walletAddress);
+      } catch (stellarError: any) {
+        console.error("Stellar transaction error:", stellarError);
+        res.status(500).json({
+          success: false,
+          message: "Failed to create investor on blockchain",
+          error: stellarError.message || "Stellar transaction failed",
+        });
+        return;
+      }
     }
 
     // Create investor in MongoDB
-    const investor = new Investor({
-      stellarAddress,
-      email: email.toLowerCase(),
-      firstName,
-      lastName,
-      nftBalance: 0,
-      totalInvested: 0,
-      claimedAmount: 0,
+    const newInvestor = new Investor({
+      autoFuel,
+      walletAddress,
+      InternalwalletAddress,
+      vaultID,
+      issuer,
+      nationality,
+      first_name,
+      last_name,
+      address,
+      profilePicture,
+      email: email?.toLowerCase(),
+      investor,
+      loginCount: loginCount || 0,
+      accountVerified: accountVerified || false,
+      lastLoginAt,
+      createdAt: createdAt || new Date(),
     });
 
-    await investor.save();
+    await newInvestor.save();
 
     res.status(201).json({
       success: true,
       message: "Investor created successfully",
       data: {
         investor: {
-          id: investor._id,
-          stellarAddress: investor.stellarAddress,
-          email: investor.email,
-          firstName: investor.firstName,
-          lastName: investor.lastName,
-          // phoneNumber, country and kycStatus removed from response
-          nftBalance: investor.nftBalance,
-          totalInvested: investor.totalInvested,
-          claimedAmount: investor.claimedAmount,
-          createdAt: investor.createdAt,
-          updatedAt: investor.updatedAt,
+          id: newInvestor._id,
+          autoFuel: newInvestor.autoFuel,
+          walletAddress: newInvestor.walletAddress,
+          InternalwalletAddress: newInvestor.InternalwalletAddress,
+          vaultID: newInvestor.vaultID,
+          issuer: newInvestor.issuer,
+          nationality: newInvestor.nationality,
+          first_name: newInvestor.first_name,
+          last_name: newInvestor.last_name,
+          address: newInvestor.address,
+          profilePicture: newInvestor.profilePicture,
+          email: newInvestor.email,
+          investor: newInvestor.investor,
+          loginCount: newInvestor.loginCount,
+          accountVerified: newInvestor.accountVerified,
+          totalAmountInvested: newInvestor.totalAmountInvested,
+          amountInvested: newInvestor.amountInvested,
+          lastLoginAt: newInvestor.lastLoginAt,
+          createdAt: newInvestor.createdAt,
         },
         transactionHash,
       },

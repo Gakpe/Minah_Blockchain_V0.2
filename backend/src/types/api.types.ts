@@ -8,28 +8,80 @@ export interface ApiResponse<T = any> {
 }
 
 export interface CreateInvestorRequest {
-  stellarAddress: string;
-  email: string;
-  firstName: string;
-  lastName: string;
+  autoFuel?: boolean;
+  walletAddress?: string;
+  InternalwalletAddress?: string;
+  vaultID?: string;
+  issuer?: string;
+  nationality?: string;
+  first_name?: string;
+  last_name?: string;
+  address?: string;
+  profilePicture?: string;
+  email?: string;
+  investor?: boolean;
+  loginCount?: number;
+  accountVerified?: boolean;
+  totalAmountInvested?: number;
+  amountInvested?: Array<{
+    amount: string;
+    timestamp: Date;
+  }>;
+  lastLoginAt?: Date;
+  createdAt?: Date;
+}
+
+export interface CreateVaultRequest {
+  walletAddress?: string;
+  InternalwalletAddress?: string;
+  vaultID?: string;
+  assetID?: string;
+  name?: string;
+  vaultAddress?: string;
 }
 
 export interface InvestorResponse {
   id: string;
-  stellarAddress: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  nftBalance: number;
-  totalInvested: number;
-  claimedAmount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  autoFuel?: boolean;
+  walletAddress?: string;
+  InternalwalletAddress?: string;
+  vaultID?: string;
+  issuer?: string;
+  nationality?: string;
+  first_name?: string;
+  last_name?: string;
+  address?: string;
+  profilePicture?: string;
+  email?: string;
+  investor?: boolean;
+  loginCount?: number;
+  accountVerified?: boolean;
+  totalAmountInvested?: number;
+  amountInvested?: Array<{
+    amount: string;
+    timestamp: Date;
+  }>;
+  lastLoginAt?: Date;
+  createdAt?: Date;
+}
+
+export interface VaultResponse {
+  id: string;
+  walletAddress?: string;
+  InternalwalletAddress?: string;
+  vaultID?: string;
+  assetID?: string;
+  name?: string;
+  vaultAddress?: string;
 }
 
 export interface CreateInvestorResponse {
   investor: InvestorResponse;
-  transactionHash: string;
+  transactionHash?: string;
+}
+
+export interface CreateVaultResponse {
+  vault: VaultResponse;
 }
 
 export interface HealthCheckResponse {
