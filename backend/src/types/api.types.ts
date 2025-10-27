@@ -89,6 +89,11 @@ export interface GetInvestorCountResponse {
   count: number;
 }
 
+export interface GetInvestmentStateResponse {
+  state: number;
+  stateName: string;
+}
+
 export interface CreateVaultResponse {
   vault: VaultResponse;
 }

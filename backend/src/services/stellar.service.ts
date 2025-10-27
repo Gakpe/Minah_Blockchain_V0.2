@@ -600,6 +600,28 @@ class StellarService {
   }
 
   /**
+   * Get the current state of the investment from the contract
+   * @returns The current investment state
+   */
+  async getCurrentInvestmentState(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_current_state();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_current_state on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Validate if a Stellar address is valid
    * @param address - The Stellar address to validate
    * @returns boolean indicating if address is valid

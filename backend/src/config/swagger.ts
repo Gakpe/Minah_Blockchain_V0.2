@@ -20,6 +20,10 @@ const swaggerDefinition = {
   ],
   tags: [
     {
+      name: "Debug",
+      description: "Debugging endpoints that has no effect on the workflow.",
+    },
+    {
       name: "Investors",
       description: "Investor management endpoints",
     },
@@ -28,8 +32,17 @@ const swaggerDefinition = {
       description: "Vault management endpoints",
     },
     {
+      name: "Investment State",
+      description: "Investment state management endpoints",
+    },
+    {
       name: "Release",
       description: "ROI distribution release management endpoints",
+    },
+
+    {
+      name: "Chronometer",
+      description: "Chronometer management endpoints",
     },
   ],
   components: {
@@ -176,6 +189,36 @@ const swaggerDefinition = {
             type: "string",
             description: "Vault contract address",
             example: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          },
+        },
+      },
+      InvestmentState: {
+        type: "object",
+        properties: {
+          state: {
+            type: "number",
+            description: "Current investment state as enum value",
+            example: 1,
+          },
+          stateName: {
+            type: "string",
+            description: "Human-readable state name",
+            example: "BeforeFirstRelease",
+            enum: [
+              "BuyingPhase",
+              "BeforeFirstRelease",
+              "SixMonthsDone",
+              "TenMonthsDone",
+              "OneYearTwoMonthsDone",
+              "OneYearSixMonthsDone",
+              "OneYearTenMonthsDone",
+              "TwoYearsTwoMonthsDone",
+              "TwoYearsSixMonthsDone",
+              "TwoYearsTenMonthsDone",
+              "ThreeYearsTwoMonthsDone",
+              "ThreeYearsSixMonthsDone",
+              "Ended",
+            ],
           },
         },
       },
