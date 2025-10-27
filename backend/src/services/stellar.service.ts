@@ -666,6 +666,53 @@ class StellarService {
   }
 
   /**
+   * Get the current supply of NFTs from the contract
+   * @returns The current NFT supply
+   */
+  async getCurrentNFTSupply(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_current_supply();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_current_supply on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the claimed amount for a specific investor
+   * @param investorAddress - The Stellar address of the investor
+   * @returns The claimed amount for the investor
+   */
+  async getInvestorClaimedAmount(investorAddress: string): Promise<bigint> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.see_claimed_amount({
+        investor: investorAddress,
+      });
+
+      return result;
+    } catch (error) {
+      console.error("Error calling see_claimed_amount on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Validate if a Stellar address is valid
    * @param address - The Stellar address to validate
    * @returns boolean indicating if address is valid
