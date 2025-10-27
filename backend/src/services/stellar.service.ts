@@ -622,6 +622,50 @@ class StellarService {
   }
 
   /**
+   * Check if the chronometer has started
+   * @returns boolean indicating if chronometer is started
+   */
+  async isChronometerStarted(): Promise<boolean> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.is_chronometer_started();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling is_chronometer_started on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the begin date of the chronometer
+   * @returns The begin date as a timestamp (u64)
+   */
+  async getChronometerBeginDate(): Promise<bigint> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_begin_date();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_begin_date on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Validate if a Stellar address is valid
    * @param address - The Stellar address to validate
    * @returns boolean indicating if address is valid
