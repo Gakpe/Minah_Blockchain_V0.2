@@ -257,6 +257,29 @@ const swaggerDefinition = {
           },
         },
       },
+      ChronometerDetails: {
+        type: "object",
+        properties: {
+          isStarted: {
+            type: "boolean",
+            description: "Whether the chronometer has been started",
+            example: true,
+          },
+          beginDate: {
+            type: "string",
+            description: "The begin date as a timestamp string (seconds since epoch)",
+            example: "1698403320",
+            nullable: true,
+          },
+          beginDateUTC: {
+            type: "string",
+            format: "date-time",
+            description: "The begin date in UTC format",
+            example: "Wed, 26 Oct 2023 14:22:00 GMT",
+            nullable: true,
+          },
+        },
+      },
     },
   },
 };

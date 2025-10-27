@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { startChronometer } from "../controllers/investor.controller";
+import {
+  startChronometer,
+  getChronometerDetails,
+} from "../controllers/chronometer.controller";
 
 const router = Router();
 
-/**
- * @swagger
- * tags:
- *   name: Chronometer
- *   description: Chronometer management endpoints
- */
+// Start chronometer
+router.post("/start", startChronometer);
 
-router.post("/", startChronometer);
+// Get chronometer details
+router.get("/details", getChronometerDetails);
 
 export default router;
