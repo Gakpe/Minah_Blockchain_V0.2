@@ -384,7 +384,7 @@ fn test_exact_max_nfts_per_investor_boundary() {
 fn test_mint_in_wrong_state() {
     let env = Env::default();
     let owner = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(7));
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
@@ -429,7 +429,7 @@ fn test_mint_in_wrong_state() {
 fn test_start_chronometer_mints_remaining_to_owner() {
     let env = Env::default();
     let owner = Address::generate(&env);
-    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(7));
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
@@ -468,4 +468,37 @@ fn test_start_chronometer_mints_remaining_to_owner() {
     let owner_balance_after = client.balance(&owner);
     let expected_owner_balance = crate::TOTAL_SUPPLY - minted_amount;
     assert_eq!(owner_balance_after, expected_owner_balance);
+}
+
+#[test]
+#[should_panic(expected = "CHRONOMETER_ALREADY_STARTED")]
+fn test_double_chronometer_start() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(7));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    let investor = Address::generate(&env);
+
+    // Mint some NFTs first
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        50,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer
+    client.start_chronometer();
+
+    // Try to start again - should panic
+    client.start_chronometer();
 }
