@@ -271,12 +271,42 @@ const swaggerDefinition = {
             example: "1698403320",
             nullable: true,
           },
-          beginDateUTC: {
+          beginDateISO: {
             type: "string",
             format: "date-time",
-            description: "The begin date in UTC format",
-            example: "Wed, 26 Oct 2023 14:22:00 GMT",
+            description: "The begin date in ISO 8601 format",
+            example: "2024-10-27T10:15:30.000Z",
             nullable: true,
+          },
+        },
+      },
+      NFTSupply: {
+        type: "object",
+        properties: {
+          currentSupply: {
+            type: "number",
+            description: "Current number of NFTs minted",
+            example: 150,
+          },
+        },
+      },
+      ClaimedAmount: {
+        type: "object",
+        properties: {
+          claimedAmount: {
+            type: "string",
+            description: "Claimed amount in base units (raw blockchain value)",
+            example: "5000000000",
+          },
+          claimedAmountFormatted: {
+            type: "string",
+            description: "Claimed amount formatted for display with decimals",
+            example: "50.0",
+          },
+          walletAddress: {
+            type: "string",
+            description: "Stellar wallet address of the investor",
+            example: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
           },
         },
       },

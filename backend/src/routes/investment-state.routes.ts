@@ -1,15 +1,12 @@
 import { Router } from "express";
-import { getInvestmentState } from "../controllers/investment-state.controller";
+import {
+  getInvestmentState,
+  getCurrentNFTSupply,
+} from "../controllers/investment-state.controller";
 
 const router = Router();
 
-/**
- * @swagger
- * tags:
- *   name: Investment State
- *   description: Investment state management endpoints
- */
-
 router.get("/", getInvestmentState);
+router.get("/nft-supply", getCurrentNFTSupply);
 
 export default router;
