@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createInvestor, getAllInvestors, getInvestorCount } from "../controllers/investor.controller";
+import { createInvestor, getAllInvestors, getInvestorCount, getInvestorClaimedAmount } from "../controllers/investor.controller";
 
 const router = Router();
 
@@ -13,5 +13,6 @@ const router = Router();
 router.post("/create", createInvestor);
 router.get("/", getAllInvestors);
 router.get("/count", getInvestorCount);
+router.get("/:id/claimed-amount", getInvestorClaimedAmount);
 
 export default router;
