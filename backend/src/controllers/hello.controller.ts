@@ -7,7 +7,7 @@ import { stellarService } from "../services/stellar.service";
  *   get:
  *     summary: Call the contract `hello` function
  *     description: Calls the Minah smart contract `hello` method and returns its output
- *     tags: [Investors]
+ *     tags: [Debug]
  *     parameters:
  *       - in: query
  *         name: to

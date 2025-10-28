@@ -77,8 +77,8 @@ const STABLECOIN_DECIMALS: u32 = 7;
 const TOTAL_SUPPLY: u32 = 4500;
 const PRICE: i128 = 1; // TODO: change to 455 for production
 const STABLECOIN_SCALE: u32 = 10u32.pow(STABLECOIN_DECIMALS);
-// Maximum NFTs allowed per transaction during marketplace operations (transfers)
-const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
+// // Maximum NFTs allowed per transaction during marketplace operations (transfers)
+// const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
 // Maximum NFTs allowed per investor
 const MAX_NFTS_PER_INVESTOR: u32 = 150;
 // Minimum NFTs to mint at once
@@ -438,14 +438,17 @@ impl Minah {
             .expect("State not set");
 
         // SUB is safe here because of the check(countdownStart should be true)
-        let mut current_stage_index = (state as u32) - 1;
+        // We start from (state - 1) because the state enum starts from 1 for BeforeFirstRelease
+        // Cast to usize cause we will use it for indexing arrays which uses usize by default in rust
+        let mut current_stage_index = ((state as u32) - 1) as usize;
         let mut distributed = false;
 
-        while (current_stage_index as usize) < DISTRIBUTION_INTERVALS.len()
-            && elapsed >= DISTRIBUTION_INTERVALS[current_stage_index as usize]
+        // Loop through all stages that are ready for distribution
+        while (current_stage_index) < DISTRIBUTION_INTERVALS.len()
+            && elapsed >= DISTRIBUTION_INTERVALS[current_stage_index]
         {
             // Distribute for this stage
-            Self::distribute(&e, ROI_PERCENTAGES[current_stage_index as usize]);
+            Self::distribute(&e, ROI_PERCENTAGES[current_stage_index]);
 
             // Update state
             state = match state {
@@ -470,9 +473,10 @@ impl Minah {
             e.storage().instance().set(&DataKey::State, &state);
 
             // SUB is safe here because of the check(countdownStart should be true)
-            current_stage_index = (state as u32) - 1;
+            current_stage_index = ((state as u32) - 1) as usize;
             distributed = true;
 
+            // This is needed to break the loop when the last distribution is done so when we get out of the loop the state will be Ended instead of ThreeYearsSixMonthsDone Cause due to the while condition it will not be able to enter the loop again so the state will not be updated to Ended
             if state == InvestmentStatus::ThreeYearsSixMonthsDone {
                 e.storage()
                     .instance()
@@ -688,13 +692,13 @@ impl Minah {
             "TO_ADDRESS_NOT_INVESTOR_OR_OWNER"
         );
 
-        // CHECK: nft_amount should be less than or equal to maximum allowed per transaction
         let nft_amount = token_ids.len() as i128;
 
-        assert!(
-            nft_amount <= MAXIMUM_NFTS_PER_TRANSACTION,
-            "MAXIMUM_NFTS_PER_TRANSACTION_EXCEEDED"
-        );
+        // CHECK: nft_amount should be less than or equal to maximum allowed per transaction
+        // assert!(
+        //     nft_amount <= MAXIMUM_NFTS_PER_TRANSACTION,
+        //     "MAXIMUM_NFTS_PER_TRANSACTION_EXCEEDED"
+        // );
 
         // CHECK: from should have enough NFTs to sell
         let from_balance = Self::balance(&e, from.clone());
@@ -793,13 +797,13 @@ impl Minah {
             "TO_ADDRESS_NOT_INVESTOR_OR_OWNER"
         );
 
-        // CHECK: nft_amount should be less than or equal to maximum allowed per transaction
         let nft_amount = token_ids.len() as i128;
 
-        assert!(
-            nft_amount <= MAXIMUM_NFTS_PER_TRANSACTION,
-            "MAXIMUM_NFTS_PER_TRANSACTION_EXCEEDED"
-        );
+        // CHECK: nft_amount should be less than or equal to maximum allowed per transaction
+        // assert!(
+        //     nft_amount <= MAXIMUM_NFTS_PER_TRANSACTION,
+        //     "MAXIMUM_NFTS_PER_TRANSACTION_EXCEEDED"
+        // );
 
         // CHECK: from should have enough NFTs to sell
         let from_balance = Self::balance(&e, from.clone());

@@ -13,7 +13,7 @@ const router = Router();
  *   description: ROI distribution release management endpoints
  */
 
-router.post("/calculate", calculateAmountToRelease);
+router.get("/calculate/:percent", calculateAmountToRelease);
 router.post("/distribute", releaseDistribution);
 
 export default router;
