@@ -401,3 +401,23 @@ fn test_state_progression_through_distributions() {
         }
     }
 }
+
+#[test]
+fn test_calculate_amount_to_release_no_investors() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6)); // Ensure huge supply
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    // Without creating any investor and without minting, the amount to release should be 0
+    let percent: i128 = ROI_PERCENTAGES[0];
+
+    let amount = client.calculate_amount_to_release(&percent);
+
+    assert_eq!(amount, 0);
+}
