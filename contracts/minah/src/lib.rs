@@ -214,9 +214,6 @@ impl Minah {
         // User should authorize this call
         user.require_auth();
 
-        // LOG: Minting amount NFTs to user
-        log!(&e, "Minting {} NFTs to {}", amount, user);
-
         // CHECK: Amount should be >= MIN_NFTS_TO_MINT
         assert!(amount >= MIN_NFTS_TO_MINT, "MINIMUM_INVESTMENT_NOT_MET");
 
@@ -260,13 +257,6 @@ impl Minah {
             "MAXIMUM_NFTS_PER_INVESTOR_EXCEEDED"
         );
 
-        log!(
-            &e,
-            "Current supply: {}, New supply: {}",
-            current_supply,
-            new_supply
-        );
-
         let usd_amount = PRICE * amount as i128 * STABLECOIN_SCALE as i128;
 
         // CHECK: User has enough balance of stablecoin
@@ -276,24 +266,9 @@ impl Minah {
             .get(&DataKey::StableCoin)
             .expect("Stablecoin not set");
 
-        log!(&e, "Using stablecoin at address: {}", stablecoin_address);
-
         let stablecoin_client = token::Client::new(&e, &stablecoin_address);
 
-        log!(
-            &e,
-            "Stablecoin client created for address: {}",
-            stablecoin_address
-        );
-
         let user_balance = stablecoin_client.balance(&user);
-
-        log!(
-            &e,
-            "User balance: {}, Required amount: {}",
-            user_balance,
-            usd_amount
-        );
 
         assert!(user_balance >= usd_amount, "INSUFFICIENT_BALANCE");
 
@@ -301,13 +276,6 @@ impl Minah {
         let current_address = e.current_contract_address();
 
         let user_allowance = stablecoin_client.allowance(&user, &current_address);
-
-        log!(
-            &e,
-            "User allowance: {}, Required amount: {}",
-            user_allowance,
-            usd_amount
-        );
 
         assert!(user_allowance >= usd_amount, "INSUFFICIENT_ALLOWANCE");
 
@@ -486,78 +454,6 @@ impl Minah {
         }
 
         assert!(distributed, "DISTRIBUTION_NOT_READY_YET");
-    }
-
-    /// Internal distribution function
-    /// The function called from releaseDistribution() and used to distribute to investors what they earned during the current period/stage.
-    /// Arguments:
-    /// * `percent`: the percentage of ROI to be released for the current stage.(Scaled by 10_000_000 to handle decimal percentages)
-    fn distribute(e: &Env, percent: i128) {
-        // CHECK: State should not be Ended
-        let state: InvestmentStatus = e
-            .storage()
-            .instance()
-            .get(&DataKey::State)
-            .expect("State not set");
-
-        assert!(
-            state != InvestmentStatus::Ended,
-            "DISTRIBUTION_ALREADY_ENDED"
-        );
-
-        // CALCULATE amount to release for the current stage
-        let amount_to_release = Self::calculate_amount_to_release(e.clone(), percent);
-        e.storage()
-            .instance()
-            .set(&DataKey::AmountToReleaseForCurrentStage, &amount_to_release);
-
-        let stablecoin: Address = e
-            .storage()
-            .instance()
-            .get(&DataKey::StableCoin)
-            .expect("Stablecoin not set");
-        let payer: Address = e.storage().instance().get(&DataKey::Payer).unwrap();
-        let investors: Vec<Address> = e
-            .storage()
-            .instance()
-            .get(&DataKey::InvestorsArray)
-            .expect("InvestorsArray not set");
-
-        let token_client = token::Client::new(&e, &stablecoin);
-        let mut verify_released_amount: i128 = 0;
-
-        let current_address = e.current_contract_address();
-
-        for investor in investors.iter() {
-            let balance = Base::balance(&e, &investor) as i128;
-            let investor_amount = ((balance * percent) / 100) * PRICE;
-
-            // Update claimed amount for the investor
-            let mut claimed: i128 = e
-                .storage()
-                .instance()
-                .get(&DataKey::ClaimedAmount(investor.clone()))
-                .unwrap_or(0);
-
-            claimed += investor_amount;
-
-            e.storage()
-                .instance()
-                .set(&DataKey::ClaimedAmount(investor.clone()), &claimed);
-
-            // Increase the verify released amount by the investor amount
-            verify_released_amount += investor_amount;
-
-            // Do the transfer from payer to investor
-            // NOTE: The payer must have approved the contract to spend the stablecoin on their behalf
-            token_client.transfer_from(&current_address, &payer, &investor, &investor_amount);
-        }
-
-        // CHECK: verify released amount should be equal to amount to release
-        assert!(
-            verify_released_amount == amount_to_release,
-            "DISTRIBUTION_AMOUNT_MISMATCH"
-        );
     }
 
     //////////////////////////////// Getters ////////////////////////////////
@@ -741,14 +637,6 @@ impl Minah {
         // DO: Trasnfer stablecoin total_price
         stablecoin_client.transfer_from(&e.current_contract_address(), &to, &from, &total_price);
 
-        log!(
-            &e,
-            "Transferred {} stablecoins from {} to {}",
-            total_price,
-            to,
-            from
-        );
-
         // DO: Transfer NFTs
         Self::batch_transfer_from(&e, &current_address, &from, &to, token_ids);
 
@@ -873,6 +761,78 @@ impl Minah {
         }
 
         emit_batch_transfer_event(e, from, to, token_ids);
+    }
+
+    /// Internal distribution function
+    /// The function called from releaseDistribution() and used to distribute to investors what they earned during the current period/stage.
+    /// Arguments:
+    /// * `percent`: the percentage of ROI to be released for the current stage.(Scaled by 10_000_000 to handle decimal percentages)
+    fn distribute(e: &Env, percent: i128) {
+        // CHECK: State should not be Ended
+        let state: InvestmentStatus = e
+            .storage()
+            .instance()
+            .get(&DataKey::State)
+            .expect("State not set");
+
+        assert!(
+            state != InvestmentStatus::Ended,
+            "DISTRIBUTION_ALREADY_ENDED"
+        );
+
+        // CALCULATE amount to release for the current stage
+        let amount_to_release = Self::calculate_amount_to_release(e.clone(), percent);
+        e.storage()
+            .instance()
+            .set(&DataKey::AmountToReleaseForCurrentStage, &amount_to_release);
+
+        let stablecoin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::StableCoin)
+            .expect("Stablecoin not set");
+        let payer: Address = e.storage().instance().get(&DataKey::Payer).unwrap();
+        let investors: Vec<Address> = e
+            .storage()
+            .instance()
+            .get(&DataKey::InvestorsArray)
+            .expect("InvestorsArray not set");
+
+        let token_client = token::Client::new(&e, &stablecoin);
+        let mut verify_released_amount: i128 = 0;
+
+        let current_address = e.current_contract_address();
+
+        for investor in investors.iter() {
+            let balance = Base::balance(&e, &investor) as i128;
+            let investor_amount = ((balance * percent) / 100) * PRICE;
+
+            // Update claimed amount for the investor
+            let mut claimed: i128 = e
+                .storage()
+                .instance()
+                .get(&DataKey::ClaimedAmount(investor.clone()))
+                .unwrap_or(0);
+
+            claimed += investor_amount;
+
+            e.storage()
+                .instance()
+                .set(&DataKey::ClaimedAmount(investor.clone()), &claimed);
+
+            // Increase the verify released amount by the investor amount
+            verify_released_amount += investor_amount;
+
+            // Do the transfer from payer to investor
+            // NOTE: The payer must have approved the contract to spend the stablecoin on their behalf
+            token_client.transfer_from(&current_address, &payer, &investor, &investor_amount);
+        }
+
+        // CHECK: verify released amount should be equal to amount to release
+        assert!(
+            verify_released_amount == amount_to_release,
+            "DISTRIBUTION_AMOUNT_MISMATCH"
+        );
     }
 
     //////////////////////// TO DELETE FOR PROD ////////////////////////////////
