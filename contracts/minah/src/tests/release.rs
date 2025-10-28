@@ -308,3 +308,116 @@ fn test_release_distribution() {
     let state_after_final = client.get_current_state();
     assert_eq!(state_after_final, InvestmentStatus::Ended);
 }
+
+#[test]
+#[should_panic(expected = "COUNDOWN_NOT_STARTED")]
+fn test_release_distribution_without_chronometer() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    // Try to release distribution without starting chronometer - should panic
+    client.release_distribution();
+}
+
+#[test]
+fn test_state_progression_through_distributions() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    let investor = Address::generate(&env);
+
+    // Mint NFTs
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        100,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer
+    client.start_chronometer();
+    let start_time = env.ledger().timestamp();
+
+    // State should be BeforeFirstRelease
+    assert_eq!(
+        client.get_current_state(),
+        InvestmentStatus::BeforeFirstRelease
+    );
+
+    // Setup payer with sufficient funds for all distributions
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+    let max_roi_amount = 500_000_000i128; // Large amount to cover all distributions
+    stablecoin_client.transfer(&owner, &payer, &max_roi_amount);
+    // Approve enough for this distribution
+    stablecoin_client.approve(&payer, &contract_id, &500_000_000i128, &1000);
+
+    // Test progression through each state
+    let expected_states = [
+        InvestmentStatus::SixMonthsDone,
+        InvestmentStatus::TenMonthsDone,
+        InvestmentStatus::OneYearTwoMonthsDone,
+        InvestmentStatus::OneYearSixMonthsDone,
+        InvestmentStatus::OneYearTenMonthsDone,
+        InvestmentStatus::TwoYearsTwoMonthsDone,
+        InvestmentStatus::TwoYearsSixMonthsDone,
+        InvestmentStatus::TwoYearsTenMonthsDone,
+        InvestmentStatus::ThreeYearsTwoMonthsDone,
+        InvestmentStatus::ThreeYearsSixMonthsDone,
+    ];
+
+    for (i, expected_state) in expected_states.iter().enumerate() {
+        // Advance time to the next distribution interval
+        let new_timestamp = start_time + DISTRIBUTION_INTERVALS[i];
+        env.ledger().set_timestamp(new_timestamp);
+
+        // Release distribution
+        client.release_distribution();
+
+        // Check state has progressed correctly
+        let current_state = client.get_current_state();
+
+        if i == expected_states.len() - 1 {
+            // After the last distribution, state should be Ended
+            assert_eq!(current_state, InvestmentStatus::Ended);
+        } else {
+            assert_eq!(current_state, *expected_state);
+        }
+    }
+}
+
+#[test]
+fn test_calculate_amount_to_release_no_investors() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6)); // Ensure huge supply
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+
+    // Without creating any investor and without minting, the amount to release should be 0
+    let percent: i128 = ROI_PERCENTAGES[0];
+
+    let amount = client.calculate_amount_to_release(&percent);
+
+    assert_eq!(amount, 0);
+}

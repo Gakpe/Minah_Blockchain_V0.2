@@ -214,3 +214,118 @@ fn test_sell_tokens() {
     // CHECK: Total supply should remain the same
     assert_eq!(client.get_current_supply(), TOTAL_SUPPLY);
 }
+
+#[test]
+#[should_panic(expected = "NFT_TRANSFERS_NOT_ALLOWED_DURING_BUYING_PHASE")]
+fn test_buy_tokens_in_buying_phase_should_panic() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS)); // Ensure huge supply
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    // --- Setup Investors ---
+    let investor1 = Address::generate(&env);
+    let investor2 = Address::generate(&env);
+
+    // Mint NFTs to investor1 and investor2
+    mint_nft(
+        &env,
+        &client,
+        &investor1,
+        100,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    mint_nft(
+        &env,
+        &client,
+        &investor2,
+        50,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Do NOT start chronometer -> still in BuyingPhase
+    // Attempt to buy tokens while in buying phase should panic
+    let mut tokens_to_buy_from_investor1: Vec<u32> = Vec::new(&env);
+    for i in 0..10 {
+        tokens_to_buy_from_investor1.push_back(i);
+    }
+
+    // Provide stablecoin balance and allowance to buyer so checks advance to the transfer assertion
+    let total_price_in_stablecoin: i128 = 10 * PRICE * 10i128.pow(USDC_DECIMALS);
+    stablecoin_client.transfer(&owner, &investor2, &total_price_in_stablecoin);
+    stablecoin_client.approve(&investor2, &contract_id, &total_price_in_stablecoin, &100);
+
+    // Attempt the buy - should panic early with NFT_TRANSFERS_NOT_ALLOWED_DURING_BUYING_PHASE
+    client.buy_tokens(&investor1, &investor2, &tokens_to_buy_from_investor1);
+}
+
+#[test]
+#[should_panic(expected = "SPENDER_NOT_APPROVED_FOR_ALL")]
+fn test_buy_tokens_without_from_approval_should_panic() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS)); // Ensure huge supply
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    env.mock_all_auths();
+    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
+    let client = MinahClient::new(&env, &contract_id);
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    // --- Setup Investors ---
+    let investor1 = Address::generate(&env);
+    let investor2 = Address::generate(&env);
+
+    // Mint NFTs to investor1 and investor2
+    mint_nft(
+        &env,
+        &client,
+        &investor1,
+        100,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    mint_nft(
+        &env,
+        &client,
+        &investor2,
+        50,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer so transfers are allowed
+    client.start_chronometer();
+
+    // Prepare buyer stablecoin balance and approve
+    let mut tokens_to_buy_from_investor1: Vec<u32> = Vec::new(&env);
+    for i in 0..50 {
+        tokens_to_buy_from_investor1.push_back(i);
+    }
+
+    let total_price_in_stablecoin: i128 = 50 * PRICE * 10i128.pow(USDC_DECIMALS);
+    stablecoin_client.transfer(&owner, &investor2, &total_price_in_stablecoin);
+    stablecoin_client.approve(&investor2, &contract_id, &total_price_in_stablecoin, &100);
+
+    // NOTE: Do NOT call approve_for_all on investor1 - this should trigger SPENDER_NOT_APPROVED_FOR_ALL
+
+    // Attempt buy should panic when batch transfer checks for approval for all
+    client.buy_tokens(&investor1, &investor2, &tokens_to_buy_from_investor1);
+}
