@@ -738,6 +738,74 @@ class StellarService {
   }
 
   /**
+   * Get the distribution intervals from the contract
+   * @returns The distribution intervals
+   */
+  async getDistributionIntervals(): Promise<bigint[]> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_distribution_intervals();
+
+      return result;
+    } catch (error) {
+      console.error(
+        "Error calling get_distribution_intervals on Stellar:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get the length of the investors array from the contract
+   * @returns The length of the investors array
+   */
+  async getInvestorsArrayLength(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_investors_array_length();
+
+      return result;
+    } catch (error) {
+      console.error(
+        "Error calling get_investors_array_length on Stellar:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  async getPayerAddress(): Promise<string> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_payer();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_payer on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Validate if a Stellar address is valid
    * @param address - The Stellar address to validate
    * @returns boolean indicating if address is valid
