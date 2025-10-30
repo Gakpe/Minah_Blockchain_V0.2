@@ -1,8 +1,9 @@
 use soroban_sdk::{testutils::Address as _, Address, Env, Vec};
 
-use crate::{
-    tests::utils::{deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
-    Minah, MinahClient, PRICE, TOTAL_SUPPLY,
+use crate::tests::utils::{
+    create_client, deploy_stablecoin_contract, distribution_intervals_vec, mint_nft,
+    roi_percentages_vec, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT, PRICE, TOTAL_SUPPLY,
+    USDC_DECIMALS,
 };
 
 #[test]
@@ -15,9 +16,19 @@ fn test_transfer_nft() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     // --- Setup Investor ---
     let investor = Address::generate(&env);
@@ -54,9 +65,20 @@ fn test_buy_tokens() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 
     // --- Setup Multiple Investors ---
@@ -139,9 +161,20 @@ fn test_sell_tokens() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 
     // --- Setup Multiple Investors ---
@@ -225,9 +258,20 @@ fn test_buy_tokens_in_buying_phase_should_panic() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 
     // --- Setup Investors ---
@@ -281,9 +325,20 @@ fn test_buy_tokens_without_from_approval_should_panic() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
     let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
 
     // --- Setup Investors ---

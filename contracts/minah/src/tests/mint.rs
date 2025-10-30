@@ -1,12 +1,12 @@
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 use crate::{
-    tests::{
-        mint,
-        utils::{create_client, deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
+    tests::utils::{
+        create_client, deploy_stablecoin_contract, distribution_intervals_vec, mint_nft,
+        roi_percentages_vec, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT, PRICE, TOTAL_SUPPLY,
+        USDC_DECIMALS,
     },
-    InvestmentStatus, Minah, MinahClient, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT,
-    STABLECOIN_DECIMALS, TOTAL_SUPPLY,
+    InvestmentStatus, Minah, MinahClient, STABLECOIN_DECIMALS,
 };
 
 #[test]
@@ -17,7 +17,20 @@ fn test_mint_nft_to_non_investor() {
     let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let nft_receiver = Address::generate(&env);
 
@@ -32,7 +45,19 @@ fn test_mint_nft_insufficient_balance() {
     let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let nft_receiver = Address::generate(&env);
 
@@ -58,7 +83,19 @@ fn test_mint_nft_insufficient_allowance() {
     let stablecoin_address = deploy_stablecoin_contract(&env, &owner, scaled_premint_amount);
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let nft_receiver = Address::generate(&env);
 
@@ -100,11 +137,19 @@ fn test_mint_nft() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let nft_receiver = Address::generate(&env);
 
@@ -160,11 +205,19 @@ fn test_start_chronometer() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let nft_receiver = Address::generate(&env);
 
@@ -208,9 +261,19 @@ fn test_exceed_max_nfts_per_investor() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
 
@@ -236,7 +299,19 @@ fn test_minimum_investment_not_met() {
     let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
-    let client = create_client(&env, &owner, &stablecoin_address, &receiver, &payer);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
     client.create_investor(&investor);
@@ -255,9 +330,19 @@ fn test_exceed_total_supply() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor_len = TOTAL_SUPPLY / MAX_NFTS_PER_INVESTOR;
 
@@ -296,9 +381,19 @@ fn test_exact_total_supply_boundary() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor_len = TOTAL_SUPPLY / MAX_NFTS_PER_INVESTOR;
 
@@ -329,9 +424,19 @@ fn test_exact_min_investment_boundary() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
 
@@ -358,9 +463,19 @@ fn test_exact_max_nfts_per_investor_boundary() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
 
@@ -388,9 +503,19 @@ fn test_mint_in_wrong_state() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
 
@@ -433,9 +558,19 @@ fn test_start_chronometer_mints_remaining_to_owner() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
     let minted_amount = 100u32;
@@ -462,11 +597,11 @@ fn test_start_chronometer_mints_remaining_to_owner() {
     client.start_chronometer();
 
     // Check that total supply is now at maximum
-    assert_eq!(client.get_current_supply(), crate::TOTAL_SUPPLY);
+    assert_eq!(client.get_current_supply(), TOTAL_SUPPLY);
 
     // Owner should have received the remaining NFTs
     let owner_balance_after = client.balance(&owner);
-    let expected_owner_balance = crate::TOTAL_SUPPLY - minted_amount;
+    let expected_owner_balance = TOTAL_SUPPLY - minted_amount;
     assert_eq!(owner_balance_after, expected_owner_balance);
 }
 
@@ -479,9 +614,19 @@ fn test_double_chronometer_start() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
 

@@ -5,8 +5,12 @@ use soroban_sdk::{
 };
 
 use crate::{
-    tests::utils::{deploy_stablecoin_contract, mint_nft, USDC_DECIMALS},
-    InvestmentStatus, Minah, MinahClient, DISTRIBUTION_INTERVALS, ROI_PERCENTAGES,
+    tests::utils::{
+        create_client, deploy_stablecoin_contract, distribution_intervals_vec, mint_nft,
+        roi_percentages_vec, DISTRIBUTION_INTERVALS, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT,
+        PRICE, ROI_PERCENTAGES, TOTAL_SUPPLY, USDC_DECIMALS,
+    },
+    InvestmentStatus,
 };
 
 #[test]
@@ -17,9 +21,19 @@ fn test_calculate_amount_to_release() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     // --- Setup Multiple Investors ---
     let investor1 = Address::generate(&env); // Will hold 100 NFTs
@@ -97,9 +111,19 @@ fn test_release_distribution_before_time_pass() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     // --- Setup Multiple Investors ---
     let investor1 = Address::generate(&env); // Will hold 100 NFTs
@@ -146,9 +170,19 @@ fn test_release_distribution() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     // --- Setup Multiple Investors ---
     let investor1 = Address::generate(&env); // Will hold 100 NFTs
@@ -253,7 +287,7 @@ fn test_release_distribution() {
 
     // CHECK: state should be updated correctly
     let state_after_first = client.get_current_state();
-    assert_eq!(state_after_first, InvestmentStatus::SixMonthsDone);
+    assert_eq!(state_after_first, InvestmentStatus::Release1);
 
     // Pass to the next intervals similarly...
     let new_timestamp = timestamp + DISTRIBUTION_INTERVALS[1]; // Ten months in seconds
@@ -287,7 +321,7 @@ fn test_release_distribution() {
 
     // CHECK: state should be updated correctly
     let state_after_second = client.get_current_state();
-    assert_eq!(state_after_second, InvestmentStatus::TenMonthsDone);
+    assert_eq!(state_after_second, InvestmentStatus::Release2);
 
     // PASS the rest of the intervals by passing the timestamp to the end directly
     let final_timestamp = timestamp + DISTRIBUTION_INTERVALS.last().unwrap();
@@ -318,9 +352,19 @@ fn test_release_distribution_without_chronometer() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     // Try to release distribution without starting chronometer - should panic
     client.release_distribution();
@@ -334,9 +378,19 @@ fn test_state_progression_through_distributions() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     let investor = Address::generate(&env);
 
@@ -370,16 +424,16 @@ fn test_state_progression_through_distributions() {
 
     // Test progression through each state
     let expected_states = [
-        InvestmentStatus::SixMonthsDone,
-        InvestmentStatus::TenMonthsDone,
-        InvestmentStatus::OneYearTwoMonthsDone,
-        InvestmentStatus::OneYearSixMonthsDone,
-        InvestmentStatus::OneYearTenMonthsDone,
-        InvestmentStatus::TwoYearsTwoMonthsDone,
-        InvestmentStatus::TwoYearsSixMonthsDone,
-        InvestmentStatus::TwoYearsTenMonthsDone,
-        InvestmentStatus::ThreeYearsTwoMonthsDone,
-        InvestmentStatus::ThreeYearsSixMonthsDone,
+        InvestmentStatus::Release1,
+        InvestmentStatus::Release2,
+        InvestmentStatus::Release3,
+        InvestmentStatus::Release4,
+        InvestmentStatus::Release5,
+        InvestmentStatus::Release6,
+        InvestmentStatus::Release7,
+        InvestmentStatus::Release8,
+        InvestmentStatus::Release9,
+        InvestmentStatus::Release10,
     ];
 
     for (i, expected_state) in expected_states.iter().enumerate() {
@@ -410,9 +464,19 @@ fn test_calculate_amount_to_release_no_investors() {
     let receiver = Address::generate(&env);
     let payer = Address::generate(&env);
 
-    env.mock_all_auths();
-    let contract_id = env.register(Minah, (&owner, &stablecoin_address, &receiver, &payer));
-    let client = MinahClient::new(&env, &contract_id);
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
 
     // Without creating any investor and without minting, the amount to release should be 0
     let percent: i128 = ROI_PERCENTAGES[0];
