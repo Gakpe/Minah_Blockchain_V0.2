@@ -1,16 +1,16 @@
 # Stellar Minah - Investment NFT Platform
 
-A Soroban-based smart contract platform for managing investment NFTs with scheduled ROI (Return on Investment) distributions on the Stellar blockchain. The Minah contract allows investors to purchase NFTs and receive automated ROI distributions over a 3-year period at predefined intervals.
+A Soroban-based smart contract platform for managing investment NFTs with scheduled ROI (Return on Investment) distributions on the Stellar blockchain. The Minah contract allows investors to purchase NFTs and receive automated ROI distributions across 10 release stages at configurable time intervals.
 
 ## 🌟 Features
 
 - ✅ **NFT-based Investment System** - Each NFT represents an investment unit
-- ✅ **Structured ROI Distribution** - Automated distributions over 3 years (11 stages)
+- ✅ **Structured ROI Distribution** - Automated distributions over 10 stages (configurable intervals)
 - ✅ **Stablecoin Integration** - USDC-based payments and distributions
 - ✅ **Investor Registry** - On-chain investor management and tracking
 - ✅ **Time-based State Transitions** - Automatic phase progression based on elapsed time
 - ✅ **Ownership Controls** - Admin-only functions for secure contract management
-- ✅ **Minimum/Maximum Investment Limits** - 40-150 NFTs per investor
+- ✅ **Minimum/Maximum Investment Limits** - Configurable min/max NFTs per investor
 - ✅ **Event Emissions** - On-chain events for tracking all activities
 
 ## 📋 Table of Contents
@@ -63,52 +63,72 @@ The core investment NFT contract that manages the entire investment lifecycle.
 
 **Key Features:**
 
-- NFT minting and management (4,500 total supply)
+- NFT minting and management (total supply is configurable at deploy)
 - Investor registration and validation
 - Time-based chronometer for distribution timing
 - Automated ROI distribution calculations
 - State machine for investment phases
 
-**Contract Constants:**
+**Constructor Parameters (configurable at deploy):**
 
-```rust
-TOTAL_SUPPLY: 4500 NFTs
-PRICE: 455 USDC per NFT (configurable)
-MIN_NFTS_TO_MINT: 40 NFTs minimum purchase
-MAX_NFTS_PER_INVESTOR: 150 NFTs maximum per investor
+```
+owner: Address                         # Contract administrator
+stablecoin: Address                    # USDC contract address
+receiver: Address                      # Receives mint payments
+payer: Address                         # Pays ROI distributions
+price: i128                            # NFT price in USDC whole units
+total_supply: u32                      # Max NFTs
+min_nfts_to_mint: u32                  # Minimum per mint
+max_nfts_per_investor: u32             # Per-investor cap
+distribution_intervals: Vec<u64>       # Seconds, length MUST be 10
+roi_percentages: Vec<i128>             # Scaled by 10,000,000 (1e7), length MUST be 10
+
 STABLECOIN_DECIMALS: 7 (Soroban USDC standard)
 ```
 
-**Investment Phases:**
+**Investment Phases (on-chain state machine):**
 
 ```
-BuyingPhase → BeforeFirstRelease → SixMonthsDone → TenMonthsDone
-→ OneYearTwoMonthsDone → OneYearSixMonthsDone → OneYearTenMonthsDone
-→ TwoYearsTwoMonthsDone → TwoYearsSixMonthsDone → TwoYearsTenMonthsDone
-→ ThreeYearsTwoMonthsDone → ThreeYearsSixMonthsDone → Ended
+BuyingPhase → BeforeFirstRelease → Release1 → Release2 → Release3 → Release4
+→ Release5 → Release6 → Release7 → Release8 → Release9 → Release10 → Ended
 ```
 
-**Core Functions:**
+**Core Functions (selected):**
 
-- `__constructor(owner, stablecoin, receiver, payer)` - Initialize contract
-- `create_investor(new_investor)` - Register new investor (owner only)
-- `mint(user, amount)` - Purchase NFTs with stablecoins
-- `start_chronometer()` - Begin distribution countdown (owner only)
-- `release_distribution()` - Trigger ROI distribution for current stage (owner only)
-- `calculate_amount_to_release(percent)` - Calculate distribution amount
-- `distribute(percent)` - Execute distribution to all investors
+- `__constructor(owner, stablecoin, receiver, payer, price, total_supply, min_nfts_to_mint, max_nfts_per_investor, distribution_intervals[10], roi_percentages[10])`
+- `set_stablecoin(stablecoin)` (owner) — Update stablecoin address
+- `set_receiver(receiver)` (owner) — Update receiver address
+- `set_payer(payer)` (owner) — Update payer address
+- `create_investor(new_investor)` (owner) — Register an investor
+- `mint(user, amount)` — Purchase/mint NFTs (user-authorized)
+- `start_chronometer()` (owner) — Begin distribution countdown; mints remaining NFTs to owner and freezes supply
+- `release_distribution()` (owner) — Triggers one or more ready stages and advances state
+- `calculate_amount_to_release(percent)` — Calculate total distribution for given percentage (percent scaled by 10,000,000)
 
-**Getter Functions:**
+Marketplace helpers (post-buying phase):
+- `buy_tokens(from, to, token_ids[])` — Buyer pays USDC, NFTs move from seller to buyer
+- `sell_tokens(from, to, token_ids[])` — Seller receives USDC, NFTs move from seller to buyer
 
-- `get_stablecoin()` - Get stablecoin contract address
-- `get_current_supply()` - Get current NFT supply
-- `get_begin_date()` - Get chronometer start date
-- `get_receiver()` - Get payment receiver address
-- `get_payer()` - Get distribution payer address
-- `get_investors_array()` - Get list of all investors
-- `get_state()` - Get current investment phase
-- `is_investor(address)` - Check if address is registered
-- `get_claimed_amount(address)` - Get total claimed by investor
+Transfers via standard `transfer/transfer_from` are disabled and will revert for Minah NFTs.
+
+**Getter Functions (read-only):**
+
+- `get_stablecoin()` — Stablecoin contract address
+- `get_receiver()` — Payment receiver address
+- `get_payer()` — Distribution payer address
+- `get_begin_date()` — Chronometer start date (unix seconds)
+- `is_chronometer_started()` — Whether countdown has started
+- `get_current_supply()` — Current NFT supply
+- `get_total_supply()` — Total supply cap
+- `get_nft_price()` — NFT price (whole units)
+- `get_min_nfts_to_mint()` — Minimum per mint
+- `get_max_nfts_per_investor()` — Per-investor cap
+- `get_nft_buying_phase_supply()` — NFTs sold during buying phase
+- `get_distribution_intervals()` — All 10 intervals (seconds)
+- `get_roi_percentages()` — All 10 ROI percentages (scaled by 10,000,000)
+- `get_current_state()` — Current investment phase enum value
+- `get_investors_array_length()` — Number of registered investors
+- `see_claimed_amount(address)` — Total claimed for an investor (raw units)
 
 ### Stablecoin Contract
 
@@ -215,15 +235,18 @@ stellar contract deploy \
   --owner $(stellar keys address owner) \
   --stablecoin <STABLECOIN_CONTRACT_ID> \
   --receiver $(stellar keys address owner) \
-  --payer $(stellar keys address owner)
+  --payer $(stellar keys address owner) \
+  --price <PRICE_USDC_WHOLE_UNITS> \
+  --total-supply <TOTAL_SUPPLY> \
+  --min-nfts-to-mint <MIN_PER_MINT> \
+  --max-nfts-per-investor <MAX_PER_INVESTOR> \
+  --distribution-intervals '[<s1>,<s2>,<s3>,<s4>,<s5>,<s6>,<s7>,<s8>,<s9>,<s10>]' \
+  --roi-percentages '["<p1>","<p2>","<p3>","<p4>","<p5>","<p6>","<p7>","<p8>","<p9>","<p10>"]'
 ```
 
-**Parameters:**
-
-- `owner` - Contract administrator address (can create investors, start chronometer, release distributions)
-- `stablecoin` - Address of the stablecoin contract (USDC)
-- `receiver` - Address that receives NFT purchase payments
-- `payer` - Address that pays out ROI distributions (must have sufficient USDC)
+Notes:
+- `roi-percentages` are scaled by 10,000,000 (e.g., 4% = "40000000").
+- `distribution-intervals` must have 10 elements (seconds) and map 1:1 to the 10 release stages.
 
 ### 3. Note the Contract Address
 
@@ -247,6 +270,7 @@ stellar contract invoke \
 
 ```bash
 # 1. First approve the Minah contract to spend stablecoins
+# APPROVAL_AMOUNT = amount_to_mint * price * 10^7
 stellar contract invoke \
   --id <STABLECOIN_CONTRACT_ID> \
   --source-account investor1 \
@@ -255,7 +279,7 @@ stellar contract invoke \
   approve \
   --from $(stellar keys address investor1) \
   --spender <MINAH_CONTRACT_ID> \
-  --amount 18200000000
+  --amount <APPROVAL_AMOUNT>
 
 # 2. Mint 40 NFTs (minimum)
 stellar contract invoke \
@@ -288,7 +312,7 @@ stellar contract invoke \
   --network testnet \
   -- \
   calculate_amount_to_release \
-  --percent 4000000
+  --percent 40000000   # 4% scaled by 10,000,000
 ```
 
 ### Release Distribution
@@ -323,16 +347,16 @@ stellar contract invoke \
   --source-account owner \
   --network testnet \
   -- \
-  get_state
+  get_current_state
 
-# Check investor balance
+# Check investor NFT balance
 stellar contract invoke \
   --id <MINAH_CONTRACT_ID> \
   --source-account owner \
   --network testnet \
   -- \
-  balance_of \
-  --owner <INVESTOR_ADDRESS>
+  balance \
+  --account <INVESTOR_ADDRESS>
 
 # Get claimed amount
 stellar contract invoke \
@@ -340,8 +364,24 @@ stellar contract invoke \
   --source-account owner \
   --network testnet \
   -- \
-  get_claimed_amount \
-  --address <INVESTOR_ADDRESS>
+  see_claimed_amount \
+  --investor <INVESTOR_ADDRESS>
+
+# Get distribution intervals
+stellar contract invoke \
+  --id <MINAH_CONTRACT_ID> \
+  --source-account owner \
+  --network testnet \
+  -- \
+  get_distribution_intervals
+
+# Get ROI percentages (scaled by 10,000,000)
+stellar contract invoke \
+  --id <MINAH_CONTRACT_ID> \
+  --source-account owner \
+  --network testnet \
+  -- \
+  get_roi_percentages
 ```
 
 ## 📈 Investment Lifecycle
@@ -361,7 +401,7 @@ stellar contract invoke \
 - Begin date is recorded on-chain
 - State transitions to `BeforeFirstRelease`
 
-### Phase 3: Distribution Stages (11 stages over 3 years)
+### Phase 3: Distribution Stages (10 stages)
 
 - At each interval, owner calls `release_distribution()`
 - Contract validates elapsed time meets the requirement
