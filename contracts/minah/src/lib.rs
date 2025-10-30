@@ -361,6 +361,11 @@ impl Minah {
             .get(&DataKey::TotalSupply)
             .expect("TotalSupply not set");
 
+        // Update NFTBuyingPhaseSupply to current supply
+        e.storage()
+            .instance()
+            .set(&DataKey::NFTBuyingPhaseSupply, &current_supply);
+
         let remaining = total_supply - current_supply;
 
         // Update current supply to total supply
@@ -597,6 +602,7 @@ impl Minah {
             .expect("Price not set")
     }
 
+    /// Get total supply
     pub fn get_total_supply(e: Env) -> u32 {
         e.storage()
             .instance()
@@ -604,6 +610,7 @@ impl Minah {
             .expect("TotalSupply not set")
     }
 
+    /// Get minimum nfts to mint
     pub fn get_min_nfts_to_mint(e: Env) -> u32 {
         e.storage()
             .instance()
@@ -611,6 +618,7 @@ impl Minah {
             .expect("MinNFTsToMint not set")
     }
 
+    /// Get maximum nfts per investor
     pub fn get_max_nfts_per_investor(e: Env) -> u32 {
         e.storage()
             .instance()
@@ -618,7 +626,32 @@ impl Minah {
             .expect("MaxNFTsPerInvestor not set")
     }
 
+    /// Get nft buying phase supply
     pub fn get_nft_buying_phase_supply(e: Env) -> u32 {
+        e.storage()
+            .instance()
+            .get(&DataKey::NFTBuyingPhaseSupply)
+            .expect("NFTBuyingPhaseSupply not set")
+    }
+
+    /// Get distribution intervals array
+    pub fn get_distribution_intervals(e: Env) -> Vec<u64> {
+        e.storage()
+            .instance()
+            .get(&DataKey::DistributionIntervals)
+            .expect("DistributionIntervals not set")
+    }
+
+    /// Get ROI percentages array
+    pub fn get_roi_percentages(e: Env) -> Vec<i128> {
+        e.storage()
+            .instance()
+            .get(&DataKey::ROIPercentages)
+            .expect("ROIPercentages not set")
+    }
+
+    /// Get buying phase nft supply
+    pub fn get_buying_phase_nft_supply(e: Env) -> u32 {
         e.storage()
             .instance()
             .get(&DataKey::NFTBuyingPhaseSupply)
