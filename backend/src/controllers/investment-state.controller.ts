@@ -42,18 +42,18 @@ export const getInvestmentState = async (
     // Map state number to human-readable name
     const stateNames = [
       "BuyingPhase",
-      "BeforeFirstRelease", 
-      "SixMonthsDone",
-      "TenMonthsDone",
-      "OneYearTwoMonthsDone",
-      "OneYearSixMonthsDone", 
-      "OneYearTenMonthsDone",
-      "TwoYearsTwoMonthsDone",
-      "TwoYearsSixMonthsDone",
-      "TwoYearsTenMonthsDone",
-      "ThreeYearsTwoMonthsDone",
-      "ThreeYearsSixMonthsDone",
-      "Ended"
+      "BeforeFirstRelease",
+      "Release1",
+      "Release2",
+      "Release3",
+      "Release4",
+      "Release5",
+      "Release6",
+      "Release7",
+      "Release8",
+      "Release9",
+      "Release10",
+      "Ended",
     ];
 
     const stateName = stateNames[state] || "Unknown";
