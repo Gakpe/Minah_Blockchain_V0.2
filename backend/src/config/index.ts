@@ -25,3 +25,19 @@ export const CONFIG = {
     mintPublicKey: process.env.STELLAR_MINT_PUBLIC_KEY || "",
   },
 };
+
+export const stateNames = [
+  "BuyingPhase",
+  "BeforeFirstRelease",
+  "Release1",
+  "Release2",
+  "Release3",
+  "Release4",
+  "Release5",
+  "Release6",
+  "Release7",
+  "Release8",
+  "Release9",
+  "Release10",
+  "Ended",
+];
