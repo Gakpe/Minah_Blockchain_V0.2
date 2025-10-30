@@ -1,6 +1,5 @@
 use crate::tests::utils::{
-    create_client, deploy_stablecoin_contract, distribution_intervals_vec, roi_percentages_vec,
-    DISTRIBUTION_INTERVALS, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT, PRICE, ROI_PERCENTAGES,
+    create_client, deploy_stablecoin_contract, distribution_intervals_vec, roi_percentages_vec, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT, PRICE,
     TOTAL_SUPPLY, USDC_DECIMALS,
 };
 use soroban_sdk::{testutils::Address as _, vec, Address, Env, String};

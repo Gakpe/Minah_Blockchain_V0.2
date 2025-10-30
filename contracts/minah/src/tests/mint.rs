@@ -6,7 +6,7 @@ use crate::{
         roi_percentages_vec, MAX_NFTS_PER_INVESTOR, MIN_NFTS_TO_MINT, PRICE, TOTAL_SUPPLY,
         USDC_DECIMALS,
     },
-    InvestmentStatus, Minah, MinahClient, STABLECOIN_DECIMALS,
+    InvestmentStatus, STABLECOIN_DECIMALS,
 };
 
 #[test]
