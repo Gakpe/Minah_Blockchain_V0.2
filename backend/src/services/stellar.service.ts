@@ -713,6 +713,31 @@ class StellarService {
   }
 
   /**
+   * Get the NFT balance for a specific investor
+   * @param investorAddress - The Stellar address of the investor
+   * @returns The NFT balance for the investor
+   */
+  async getInvestorNFTBalance(investorAddress: string): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.balance({
+        account: investorAddress,
+      });
+
+      return result;
+    } catch (error) {
+      console.error("Error calling balance_of on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Validate if a Stellar address is valid
    * @param address - The Stellar address to validate
    * @returns boolean indicating if address is valid
