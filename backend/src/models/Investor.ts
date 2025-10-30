@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+//// INVESTOR MODEL ////
 export interface IInvestor extends Document {
   autoFuel?: boolean;
   walletAddress?: string;
@@ -22,15 +23,7 @@ export interface IInvestor extends Document {
   }>;
   lastLoginAt?: Date;
   createdAt?: Date;
-}
-
-export interface IVault extends Document {
-  walletAddress?: string;
-  InternalwalletAddress?: string;
-  vaultID?: string;
-  assetID?: string;
-  name?: string;
-  vaultAddress?: string;
+  creationTransactionHash?: string;
 }
 
 const InvestorSchema: Schema = new Schema({
@@ -69,6 +62,7 @@ const InvestorSchema: Schema = new Schema({
   },
   email: {
     type: String,
+    required: false,
   },
   investor: {
     type: Boolean,
@@ -82,21 +76,37 @@ const InvestorSchema: Schema = new Schema({
   totalAmountInvested: {
     type: Number,
   },
-  amountInvested: [{
-    amount: {
-      type: String,
+  amountInvested: [
+    {
+      amount: {
+        type: String,
+      },
+      timestamp: {
+        type: Date,
+      },
     },
-    timestamp: {
-      type: Date,
-    }
-  }],
+  ],
   lastLoginAt: {
     type: Date,
   },
   createdAt: {
     type: Date,
-  }
+  },
+  creationTransactionHash: {
+    type: String,
+    required: false,
+  },
 });
+
+//// VAULT MODEL ////
+export interface IVault extends Document {
+  walletAddress?: string;
+  InternalwalletAddress?: string;
+  vaultID?: string;
+  assetID?: string;
+  name?: string;
+  vaultAddress?: string;
+}
 
 const VaultSchema: Schema = new Schema({
   walletAddress: {
@@ -118,7 +128,7 @@ const VaultSchema: Schema = new Schema({
   },
   vaultAddress: {
     type: String,
-  }
+  },
 });
 
 export const Investor = mongoose.model<IInvestor>("Investor", InvestorSchema);

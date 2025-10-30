@@ -8,27 +8,7 @@ export interface ApiResponse<T = any> {
 }
 
 export interface CreateInvestorRequest {
-  autoFuel?: boolean;
-  walletAddress?: string;
-  InternalwalletAddress?: string;
-  vaultID?: string;
-  issuer?: string;
-  nationality?: string;
-  first_name?: string;
-  last_name?: string;
-  address?: string;
-  profilePicture?: string;
-  email?: string;
-  investor?: boolean;
-  loginCount?: number;
-  accountVerified?: boolean;
-  totalAmountInvested?: number;
-  amountInvested?: Array<{
-    amount: string;
-    timestamp: Date;
-  }>;
-  lastLoginAt?: Date;
-  createdAt?: Date;
+  walletAddress: string;
 }
 
 export interface CreateVaultRequest {
@@ -41,28 +21,10 @@ export interface CreateVaultRequest {
 }
 
 export interface InvestorResponse {
-  id: string;
-  autoFuel?: boolean;
-  walletAddress?: string;
-  InternalwalletAddress?: string;
-  vaultID?: string;
-  issuer?: string;
-  nationality?: string;
-  first_name?: string;
-  last_name?: string;
-  address?: string;
-  profilePicture?: string;
-  email?: string;
-  investor?: boolean;
-  loginCount?: number;
-  accountVerified?: boolean;
-  totalAmountInvested?: number;
-  amountInvested?: Array<{
-    amount: string;
-    timestamp: Date;
-  }>;
-  lastLoginAt?: Date;
-  createdAt?: Date;
+  walletAddress: string;
+  creationTransactionHash?: string;
+  balanceNFT: string;
+  createdAt: string;
 }
 
 export interface VaultResponse {

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { stellarService } from "../services/stellar.service";
 import { formatUnits, parseUnits } from "viem";
-import { CONFIG } from "../config";
+import { CONFIG, stateNames } from "../config";
 
 /**
  * @swagger
@@ -175,6 +175,73 @@ export const releaseDistribution = async (
   res: Response
 ): Promise<void> => {
   try {
+    const isChronometerStarted = await stellarService.isChronometerStarted();
+
+    if (!isChronometerStarted) {
+      res.status(400).json({
+        success: false,
+        message: "Distribution not ready to be released",
+        error: "Chronometer has not started",
+      });
+      return;
+    }
+
+    const investmentState = await stellarService.getCurrentInvestmentState();
+
+    if (investmentState === stateNames.length - 1) {
+      res.status(400).json({
+        success: false,
+        message: "Distribution cannot be released",
+        error: "Investment has ended",
+      });
+      return;
+    }
+
+    if (investmentState === 0) {
+      res.status(400).json({
+        success: false,
+        message: "Distribution cannot be released",
+        error: "Investment is not started",
+      });
+      return;
+    }
+
+    // Calculate the elapsed time since chronometer began
+    const chronometerBeginDate = Number(
+      await stellarService.getChronometerBeginDate()
+    );
+
+    const elapsedTime = Math.floor(Date.now() / 1000) - chronometerBeginDate;
+
+    // Calculate the required time for the current stage
+    const currentStageIndex = investmentState - 1;
+
+    const distributionIntervals =
+      await stellarService.getDistributionIntervals();
+
+    const requiredTime = Number(distributionIntervals[currentStageIndex]);
+
+    if (elapsedTime < requiredTime) {
+      res.status(400).json({
+        success: false,
+        message: "Distribution not ready to be released",
+        error: "Required time interval has not elapsed",
+      });
+      return;
+    }
+
+    // Check if there is investors to distribute to
+    const investorCount = await stellarService.getInvestorsArrayLength();
+
+    if (investorCount === 0) {
+      res.status(400).json({
+        success: false,
+        message: "No investors to distribute to",
+        error: "Investor list is empty",
+      });
+      return;
+    }
+
     // Release distribution on Stellar blockchain
     let transactionHash: string;
     try {

@@ -8,6 +8,7 @@ import investmentStateRoutes from "./routes/investment-state.routes";
 import helloRoutes from "./routes/hello.routes";
 import chronometerRoutes from "./routes/chronometer.routes";
 import releaseRoutes from "./routes/release.routes";
+import contractInfoRoutes from "./routes/contract-info.routes";
 
 const app = express();
 
@@ -38,5 +39,6 @@ app.use("/api/investment-state", investmentStateRoutes);
 app.use("/api/hello", helloRoutes);
 app.use("/api/chronometer", chronometerRoutes);
 app.use("/api/release", releaseRoutes);
+app.use("/api/contract-info", contractInfoRoutes);
 
 export default app;

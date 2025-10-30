@@ -26,16 +26,16 @@ export const networks = {
 export enum InvestmentStatus {
   BuyingPhase = 0,
   BeforeFirstRelease = 1,
-  SixMonthsDone = 2,
-  TenMonthsDone = 3,
-  OneYearTwoMonthsDone = 4,
-  OneYearSixMonthsDone = 5,
-  OneYearTenMonthsDone = 6,
-  TwoYearsTwoMonthsDone = 7,
-  TwoYearsSixMonthsDone = 8,
-  TwoYearsTenMonthsDone = 9,
-  ThreeYearsTwoMonthsDone = 10,
-  ThreeYearsSixMonthsDone = 11,
+  Release1 = 2,
+  Release2 = 3,
+  Release3 = 4,
+  Release4 = 5,
+  Release5 = 6,
+  Release6 = 7,
+  Release7 = 8,
+  Release8 = 9,
+  Release9 = 10,
+  Release10 = 11,
   Ended = 12,
 }
 
@@ -50,7 +50,14 @@ export type DataKey =
   | { tag: "CountdownStart"; values: void }
   | { tag: "State"; values: void }
   | { tag: "Investor"; values: readonly [string] }
-  | { tag: "ClaimedAmount"; values: readonly [string] };
+  | { tag: "ClaimedAmount"; values: readonly [string] }
+  | { tag: "DistributionIntervals"; values: void }
+  | { tag: "ROIPercentages"; values: void }
+  | { tag: "Price"; values: void }
+  | { tag: "MinNFTsToMint"; values: void }
+  | { tag: "MaxNFTsPerInvestor"; values: void }
+  | { tag: "TotalSupply"; values: void }
+  | { tag: "NFTBuyingPhaseSupply"; values: void };
 
 /**
  * Storage key for enumeration of accounts per role.
@@ -454,7 +461,7 @@ export interface Client {
    * Calculate amount to release for a given percentage
    * Function to know how much to approve() on the STABLECOIN smart contract before releasing the amount to all investors.
    * Arguments:
-   * * `percentage`: the percentage of ROI to be released for the current stage.(Scaled by 1_000_000 to handle decimal percentages)
+   * * `percentage`: the percentage of ROI to be released for the current stage.(Scaled by 10_000_000 to handle decimal percentages)
    */
   calculate_amount_to_release: (
     { percent }: { percent: i128 },
@@ -734,6 +741,153 @@ export interface Client {
      */
     simulate?: boolean;
   }) => Promise<AssembledTransaction<i128>>;
+
+  /**
+   * Construct and simulate a get_total_supply transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get total supply
+   */
+  get_total_supply: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<u32>>;
+
+  /**
+   * Construct and simulate a get_min_nfts_to_mint transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get minimum nfts to mint
+   */
+  get_min_nfts_to_mint: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<u32>>;
+
+  /**
+   * Construct and simulate a get_max_nfts_per_investor transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get maximum nfts per investor
+   */
+  get_max_nfts_per_investor: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<u32>>;
+
+  /**
+   * Construct and simulate a get_nft_buying_phase_supply transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get nft buying phase supply
+   */
+  get_nft_buying_phase_supply: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<u32>>;
+
+  /**
+   * Construct and simulate a get_distribution_intervals transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get distribution intervals array
+   */
+  get_distribution_intervals: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<Array<u64>>>;
+
+  /**
+   * Construct and simulate a get_roi_percentages transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get ROI percentages array
+   */
+  get_roi_percentages: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<Array<i128>>>;
+
+  /**
+   * Construct and simulate a get_buying_phase_nft_supply transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get buying phase nft supply
+   */
+  get_buying_phase_nft_supply: (options?: {
+    /**
+     * The fee to pay for the transaction. Default: BASE_FEE
+     */
+    fee?: number;
+
+    /**
+     * The maximum amount of time to wait for the transaction to complete. Default: DEFAULT_TIMEOUT
+     */
+    timeoutInSeconds?: number;
+
+    /**
+     * Whether to automatically simulate the transaction when constructing the AssembledTransaction. Default: true
+     */
+    simulate?: boolean;
+  }) => Promise<AssembledTransaction<u32>>;
 
   /**
    * Construct and simulate a buy_tokens transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -1220,7 +1374,24 @@ export class Client extends ContractClient {
       stablecoin,
       receiver,
       payer,
-    }: { owner: string; stablecoin: string; receiver: string; payer: string },
+      price,
+      total_supply,
+      min_nfts_to_mint,
+      max_nfts_per_investor,
+      distribution_intervals,
+      roi_percentages,
+    }: {
+      owner: string;
+      stablecoin: string;
+      receiver: string;
+      payer: string;
+      price: i128;
+      total_supply: u32;
+      min_nfts_to_mint: u32;
+      max_nfts_per_investor: u32;
+      distribution_intervals: Array<u64>;
+      roi_percentages: Array<i128>;
+    },
     /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
@@ -1233,21 +1404,32 @@ export class Client extends ContractClient {
       }
   ): Promise<AssembledTransaction<T>> {
     return ContractClient.deploy(
-      { owner, stablecoin, receiver, payer },
+      {
+        owner,
+        stablecoin,
+        receiver,
+        payer,
+        price,
+        total_supply,
+        min_nfts_to_mint,
+        max_nfts_per_investor,
+        distribution_intervals,
+        roi_percentages,
+      },
       options
     );
   }
   constructor(public readonly options: ContractClientOptions) {
     super(
       new ContractSpec([
-        "AAAAAwAAAAAAAAAAAAAAEEludmVzdG1lbnRTdGF0dXMAAAANAAAAAAAAAAtCdXlpbmdQaGFzZQAAAAAAAAAAAAAAABJCZWZvcmVGaXJzdFJlbGVhc2UAAAAAAAEAAAAAAAAADVNpeE1vbnRoc0RvbmUAAAAAAAACAAAAAAAAAA1UZW5Nb250aHNEb25lAAAAAAAAAwAAAAAAAAAUT25lWWVhclR3b01vbnRoc0RvbmUAAAAEAAAAAAAAABRPbmVZZWFyU2l4TW9udGhzRG9uZQAAAAUAAAAAAAAAFE9uZVllYXJUZW5Nb250aHNEb25lAAAABgAAAAAAAAAVVHdvWWVhcnNUd29Nb250aHNEb25lAAAAAAAABwAAAAAAAAAVVHdvWWVhcnNTaXhNb250aHNEb25lAAAAAAAACAAAAAAAAAAVVHdvWWVhcnNUZW5Nb250aHNEb25lAAAAAAAACQAAAAAAAAAXVGhyZWVZZWFyc1R3b01vbnRoc0RvbmUAAAAACgAAAAAAAAAXVGhyZWVZZWFyc1NpeE1vbnRoc0RvbmUAAAAACwAAAAAAAAAFRW5kZWQAAAAAAAAM",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAACwAAAAAAAAAAAAAAClN0YWJsZUNvaW4AAAAAAAAAAAAAAAAADUN1cnJlbnRTdXBwbHkAAAAAAAAAAAAAAAAAAAlCZWdpbkRhdGUAAAAAAAAAAAAAAAAAAB5BbW91bnRUb1JlbGVhc2VGb3JDdXJyZW50U3RhZ2UAAAAAAAAAAAAAAAAACFJlY2VpdmVyAAAAAAAAAAAAAAAFUGF5ZXIAAAAAAAAAAAAAAAAAAA5JbnZlc3RvcnNBcnJheQAAAAAAAAAAAAAAAAAOQ291bnRkb3duU3RhcnQAAAAAAAAAAAAAAAAABVN0YXRlAAAAAAAAAQAAAAAAAAAISW52ZXN0b3IAAAABAAAAEwAAAAEAAAAAAAAADUNsYWltZWRBbW91bnQAAAAAAAABAAAAEw==",
-        "AAAAAAAAAAAAAAANX19jb25zdHJ1Y3RvcgAAAAAAAAQAAAAAAAAABW93bmVyAAAAAAAAEwAAAAAAAAAKc3RhYmxlY29pbgAAAAAAEwAAAAAAAAAIcmVjZWl2ZXIAAAATAAAAAAAAAAVwYXllcgAAAAAAABMAAAAA",
+        "AAAAAwAAAAAAAAAAAAAAEEludmVzdG1lbnRTdGF0dXMAAAANAAAAAAAAAAtCdXlpbmdQaGFzZQAAAAAAAAAAAAAAABJCZWZvcmVGaXJzdFJlbGVhc2UAAAAAAAEAAAAAAAAACFJlbGVhc2UxAAAAAgAAAAAAAAAIUmVsZWFzZTIAAAADAAAAAAAAAAhSZWxlYXNlMwAAAAQAAAAAAAAACFJlbGVhc2U0AAAABQAAAAAAAAAIUmVsZWFzZTUAAAAGAAAAAAAAAAhSZWxlYXNlNgAAAAcAAAAAAAAACFJlbGVhc2U3AAAACAAAAAAAAAAIUmVsZWFzZTgAAAAJAAAAAAAAAAhSZWxlYXNlOQAAAAoAAAAAAAAACVJlbGVhc2UxMAAAAAAAAAsAAAAAAAAABUVuZGVkAAAAAAAADA==",
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEgAAAAAAAAAAAAAAClN0YWJsZUNvaW4AAAAAAAAAAAAAAAAADUN1cnJlbnRTdXBwbHkAAAAAAAAAAAAAAAAAAAlCZWdpbkRhdGUAAAAAAAAAAAAAAAAAAB5BbW91bnRUb1JlbGVhc2VGb3JDdXJyZW50U3RhZ2UAAAAAAAAAAAAAAAAACFJlY2VpdmVyAAAAAAAAAAAAAAAFUGF5ZXIAAAAAAAAAAAAAAAAAAA5JbnZlc3RvcnNBcnJheQAAAAAAAAAAAAAAAAAOQ291bnRkb3duU3RhcnQAAAAAAAAAAAAAAAAABVN0YXRlAAAAAAAAAQAAAAAAAAAISW52ZXN0b3IAAAABAAAAEwAAAAEAAAAAAAAADUNsYWltZWRBbW91bnQAAAAAAAABAAAAEwAAAAAAAAAAAAAAFURpc3RyaWJ1dGlvbkludGVydmFscwAAAAAAAAAAAAAAAAAADlJPSVBlcmNlbnRhZ2VzAAAAAAAAAAAAAAAAAAVQcmljZQAAAAAAAAAAAAAAAAAADU1pbk5GVHNUb01pbnQAAAAAAAAAAAAAAAAAABJNYXhORlRzUGVySW52ZXN0b3IAAAAAAAAAAAAAAAAAC1RvdGFsU3VwcGx5AAAAAAAAAAAAAAAAFE5GVEJ1eWluZ1BoYXNlU3VwcGx5",
+        "AAAAAAAAAF5UaGVyZSBpcyBhIGxpbWl0YXRpb24gb2YgbWF4IDEwIHBhcmFtcyBieSB0aGUgc29yb2JhbiBjb250cmFjdApJbml0aWFsaXplcyB0aGUgTWluYWggY29udHJhY3QuAAAAAAANX19jb25zdHJ1Y3RvcgAAAAAAAAoAAAAAAAAABW93bmVyAAAAAAAAEwAAAAAAAAAKc3RhYmxlY29pbgAAAAAAEwAAAAAAAAAIcmVjZWl2ZXIAAAATAAAAAAAAAAVwYXllcgAAAAAAABMAAAAAAAAABXByaWNlAAAAAAAACwAAAAAAAAAMdG90YWxfc3VwcGx5AAAABAAAAAAAAAAQbWluX25mdHNfdG9fbWludAAAAAQAAAAAAAAAFW1heF9uZnRzX3Blcl9pbnZlc3RvcgAAAAAAAAQAAAAAAAAAFmRpc3RyaWJ1dGlvbl9pbnRlcnZhbHMAAAAAA+oAAAAGAAAAAAAAAA9yb2lfcGVyY2VudGFnZXMAAAAD6gAAAAsAAAAA",
         "AAAAAAAAAE5TZXRzIGEgbmV3IHN0YWJsZWNvaW4gYWRkcmVzcy4gT25seSB0aGUgY29udHJhY3Qgb3duZXIgY2FuIGNhbGwgdGhpcyBmdW5jdGlvbi4AAAAAAA5zZXRfc3RhYmxlY29pbgAAAAAAAQAAAAAAAAAKc3RhYmxlY29pbgAAAAAAEwAAAAA=",
         "AAAAAAAAANZDcmVhdGVzIGEgbmV3IGludmVzdG9yLgpGdW5jdGlvbiBjYWxsZWQgZnJvbSB0aGUgYmFja2VuZCB3aGVuIGEgdXNlciBjcmVhdGVzIGEgcHJvZmlsZSBvbiB0aGUgTWluYWggcGxhdGZvcm0KIyBBcmd1bWVudHMKKiBgbmV3SW52ZXN0b3JgIDogdGhlIGZpcmVibG9ja3MgYWRkcmVzcyBnZW5lcmF0ZWQgZm9yIHRoZSBuZXcgdXNlci4gVG8gc3RvcmUgaW4gdGhlIGJhY2tlbmQuAAAAAAAPY3JlYXRlX2ludmVzdG9yAAAAAAEAAAAAAAAADG5ld19pbnZlc3RvcgAAABMAAAAA",
         "AAAAAAAAAClNaW50cyBhIG5ldyBORlQgdG8gdGhlIHNwZWNpZmllZCBhZGRyZXNzLgAAAAAAAARtaW50AAAAAgAAAAAAAAAEdXNlcgAAABMAAAAAAAAABmFtb3VudAAAAAAABAAAAAA=",
         "AAAAAAAAACpTdGFydCB0aGUgY2hyb25vbWV0ZXIgZm9yIFJPSSBkaXN0cmlidXRpb24AAAAAABFzdGFydF9jaHJvbm9tZXRlcgAAAAAAAAAAAAAA",
-        "AAAAAAAAATJDYWxjdWxhdGUgYW1vdW50IHRvIHJlbGVhc2UgZm9yIGEgZ2l2ZW4gcGVyY2VudGFnZQpGdW5jdGlvbiB0byBrbm93IGhvdyBtdWNoIHRvIGFwcHJvdmUoKSBvbiB0aGUgU1RBQkxFQ09JTiBzbWFydCBjb250cmFjdCBiZWZvcmUgcmVsZWFzaW5nIHRoZSBhbW91bnQgdG8gYWxsIGludmVzdG9ycy4KQXJndW1lbnRzOgoqIGBwZXJjZW50YWdlYDogdGhlIHBlcmNlbnRhZ2Ugb2YgUk9JIHRvIGJlIHJlbGVhc2VkIGZvciB0aGUgY3VycmVudCBzdGFnZS4oU2NhbGVkIGJ5IDFfMDAwXzAwMCB0byBoYW5kbGUgZGVjaW1hbCBwZXJjZW50YWdlcykAAAAAABtjYWxjdWxhdGVfYW1vdW50X3RvX3JlbGVhc2UAAAAAAQAAAAAAAAAHcGVyY2VudAAAAAALAAAAAQAAAAs=",
+        "AAAAAAAAATNDYWxjdWxhdGUgYW1vdW50IHRvIHJlbGVhc2UgZm9yIGEgZ2l2ZW4gcGVyY2VudGFnZQpGdW5jdGlvbiB0byBrbm93IGhvdyBtdWNoIHRvIGFwcHJvdmUoKSBvbiB0aGUgU1RBQkxFQ09JTiBzbWFydCBjb250cmFjdCBiZWZvcmUgcmVsZWFzaW5nIHRoZSBhbW91bnQgdG8gYWxsIGludmVzdG9ycy4KQXJndW1lbnRzOgoqIGBwZXJjZW50YWdlYDogdGhlIHBlcmNlbnRhZ2Ugb2YgUk9JIHRvIGJlIHJlbGVhc2VkIGZvciB0aGUgY3VycmVudCBzdGFnZS4oU2NhbGVkIGJ5IDEwXzAwMF8wMDAgdG8gaGFuZGxlIGRlY2ltYWwgcGVyY2VudGFnZXMpAAAAABtjYWxjdWxhdGVfYW1vdW50X3RvX3JlbGVhc2UAAAAAAQAAAAAAAAAHcGVyY2VudAAAAAALAAAAAQAAAAs=",
         "AAAAAAAAALtSZWxlYXNlcyB0aGUgZGlzdHJpYnV0aW9uIGZvciB0aGUgY3VycmVudCBzdGFnZS4KVGhpcyBmdW5jdGlvbiBuZWVkcyB0byBiZSBjYWxsZWQgYnkgdGhlIG93bmVyIGF0IHRoZSBlbmQgb2YgZXZlcnkgZGlzdHJpYnV0aW9uIHBlcmlvZC9zdGFnZSB0byB0cmlnZ2VyIHRoZSBjdXJyZW50IHJlbGVhc2UgYW5kIG5leHQgc3RhZ2UuAAAAABRyZWxlYXNlX2Rpc3RyaWJ1dGlvbgAAAAAAAAAA",
         "AAAAAAAAACJDaGVjayBpZiBhbiBhZGRyZXNzIGlzIGFuIGludmVzdG9yAAAAAAALaXNfaW52ZXN0b3IAAAAAAQAAAAAAAAAIaW52ZXN0b3IAAAATAAAAAQAAAAE=",
         "AAAAAAAAABpHZXQgaW52ZXN0b3JzIGFycmF5IGxlbmd0aAAAAAAAGmdldF9pbnZlc3RvcnNfYXJyYXlfbGVuZ3RoAAAAAAAAAAAAAQAAAAQ=",
@@ -1260,6 +1442,13 @@ export class Client extends ContractClient {
         "AAAAAAAAABJHZXQgY3VycmVudCBzdXBwbHkAAAAAABJnZXRfY3VycmVudF9zdXBwbHkAAAAAAAAAAAABAAAABA==",
         "AAAAAAAAABFHZXQgY3VycmVudCBzdGF0ZQAAAAAAABFnZXRfY3VycmVudF9zdGF0ZQAAAAAAAAAAAAABAAAH0AAAABBJbnZlc3RtZW50U3RhdHVz",
         "AAAAAAAAAA1HZXQgTkZUIFBSSUNFAAAAAAAADWdldF9uZnRfcHJpY2UAAAAAAAAAAAAAAQAAAAs=",
+        "AAAAAAAAABBHZXQgdG90YWwgc3VwcGx5AAAAEGdldF90b3RhbF9zdXBwbHkAAAAAAAAAAQAAAAQ=",
+        "AAAAAAAAABhHZXQgbWluaW11bSBuZnRzIHRvIG1pbnQAAAAUZ2V0X21pbl9uZnRzX3RvX21pbnQAAAAAAAAAAQAAAAQ=",
+        "AAAAAAAAAB1HZXQgbWF4aW11bSBuZnRzIHBlciBpbnZlc3RvcgAAAAAAABlnZXRfbWF4X25mdHNfcGVyX2ludmVzdG9yAAAAAAAAAAAAAAEAAAAE",
+        "AAAAAAAAABtHZXQgbmZ0IGJ1eWluZyBwaGFzZSBzdXBwbHkAAAAAG2dldF9uZnRfYnV5aW5nX3BoYXNlX3N1cHBseQAAAAAAAAAAAQAAAAQ=",
+        "AAAAAAAAACBHZXQgZGlzdHJpYnV0aW9uIGludGVydmFscyBhcnJheQAAABpnZXRfZGlzdHJpYnV0aW9uX2ludGVydmFscwAAAAAAAAAAAAEAAAPqAAAABg==",
+        "AAAAAAAAABlHZXQgUk9JIHBlcmNlbnRhZ2VzIGFycmF5AAAAAAAAE2dldF9yb2lfcGVyY2VudGFnZXMAAAAAAAAAAAEAAAPqAAAACw==",
+        "AAAAAAAAABtHZXQgYnV5aW5nIHBoYXNlIG5mdCBzdXBwbHkAAAAAG2dldF9idXlpbmdfcGhhc2VfbmZ0X3N1cHBseQAAAAAAAAAAAQAAAAQ=",
         "AAAAAAAAAAAAAAAKYnV5X3Rva2VucwAAAAAAAwAAAAAAAAAEZnJvbQAAABMAAAAAAAAAAnRvAAAAAAATAAAAAAAAAAl0b2tlbl9pZHMAAAAAAAPqAAAABAAAAAA=",
         "AAAAAAAAAAAAAAALc2VsbF90b2tlbnMAAAAAAwAAAAAAAAAEZnJvbQAAABMAAAAAAAAAAnRvAAAAAAATAAAAAAAAAAl0b2tlbl9pZHMAAAAAAAPqAAAABAAAAAA=",
         "AAAAAAAAAExTZXRzIGEgbmV3IHJlY2VpdmVyIGFkZHJlc3MuIE9ubHkgdGhlIGNvbnRyYWN0IG93bmVyIGNhbiBjYWxsIHRoaXMgZnVuY3Rpb24uAAAADHNldF9yZWNlaXZlcgAAAAEAAAAAAAAACHJlY2VpdmVyAAAAEwAAAAA=",
@@ -1327,6 +1516,13 @@ export class Client extends ContractClient {
     get_current_supply: this.txFromJSON<u32>,
     get_current_state: this.txFromJSON<InvestmentStatus>,
     get_nft_price: this.txFromJSON<i128>,
+    get_total_supply: this.txFromJSON<u32>,
+    get_min_nfts_to_mint: this.txFromJSON<u32>,
+    get_max_nfts_per_investor: this.txFromJSON<u32>,
+    get_nft_buying_phase_supply: this.txFromJSON<u32>,
+    get_distribution_intervals: this.txFromJSON<Array<u64>>,
+    get_roi_percentages: this.txFromJSON<Array<i128>>,
+    get_buying_phase_nft_supply: this.txFromJSON<u32>,
     buy_tokens: this.txFromJSON<null>,
     sell_tokens: this.txFromJSON<null>,
     set_receiver: this.txFromJSON<null>,

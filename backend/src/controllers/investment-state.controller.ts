@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { stellarService } from "../services/stellar.service";
+import { stateNames } from "../config";
 
 /**
  * @swagger
@@ -38,23 +39,6 @@ export const getInvestmentState = async (
   try {
     // Get current investment state from the contract
     const state = await stellarService.getCurrentInvestmentState();
-
-    // Map state number to human-readable name
-    const stateNames = [
-      "BuyingPhase",
-      "BeforeFirstRelease", 
-      "SixMonthsDone",
-      "TenMonthsDone",
-      "OneYearTwoMonthsDone",
-      "OneYearSixMonthsDone", 
-      "OneYearTenMonthsDone",
-      "TwoYearsTwoMonthsDone",
-      "TwoYearsSixMonthsDone",
-      "TwoYearsTenMonthsDone",
-      "ThreeYearsTwoMonthsDone",
-      "ThreeYearsSixMonthsDone",
-      "Ended"
-    ];
 
     const stateName = stateNames[state] || "Unknown";
 
