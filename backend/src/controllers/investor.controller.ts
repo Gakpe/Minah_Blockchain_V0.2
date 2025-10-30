@@ -16,55 +16,9 @@ import { stellarService } from "../services/stellar.service";
  *           schema:
  *             type: object
  *             properties:
- *               autoFuel:
- *                 type: boolean
- *                 example: false
  *               walletAddress:
  *                 type: string
  *                 example: "GAOLV5BREHSMYOJ6GXNMJGZH2RKHYJLP7ATOU7RZQYVAM42FSSHTLLRS"
- *               InternalwalletAddress:
- *                 type: string
- *                 example: "GAOLV5BREHSMYOJ6GXNMJGZH2RKHYJLP7ATOU7RZQYVAM42FSSHTLLRS"
- *               vaultID:
- *                 type: string
- *                 example: "vault_123"
- *               issuer:
- *                 type: string
- *                 example: "Issuer Corp"
- *               nationality:
- *                 type: string
- *                 example: "US"
- *               first_name:
- *                 type: string
- *                 example: "Ayoub"
- *               last_name:
- *                 type: string
- *                 example: "Buoya"
- *               address:
- *                 type: string
- *                 example: "123 Main St, City, Country"
- *               profilePicture:
- *                 type: string
- *                 example: "https://example.com/profile.jpg"
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "ayoub@gmail.com"
- *               investor:
- *                 type: boolean
- *                 example: true
- *               loginCount:
- *                 type: number
- *                 example: 0
- *               accountVerified:
- *                 type: boolean
- *                 example: false
- *               lastLoginAt:
- *                 type: string
- *                 format: date-time
- *               createdAt:
- *                 type: string
- *                 format: date-time
  *     responses:
  *       201:
  *         description: Investor created successfully
@@ -106,36 +60,7 @@ export const createInvestor = async (
   res: Response
 ): Promise<void> => {
   try {
-    const {
-      autoFuel,
-      walletAddress,
-      InternalwalletAddress,
-      vaultID,
-      issuer,
-      nationality,
-      first_name,
-      last_name,
-      address,
-      profilePicture,
-      email,
-      investor,
-      loginCount,
-      accountVerified,
-      lastLoginAt,
-      createdAt,
-    } = req.body;
-
-    // Validate email format if provided
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid email format",
-        });
-        return;
-      }
-    }
+    const { walletAddress } = req.body;
 
     // Validate Stellar address format if provided
     if (walletAddress && !stellarService.validateAddress(walletAddress)) {
@@ -146,36 +71,20 @@ export const createInvestor = async (
       return;
     }
 
-    if (
-      InternalwalletAddress &&
-      !stellarService.validateAddress(InternalwalletAddress)
-    ) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid internal wallet address format",
-      });
-      return;
-    }
-
     // Check if investor already exists in MongoDB
     let existingInvestor = null;
-    if (email || walletAddress) {
-      const query: any = { $or: [] };
-      if (email) query.$or.push({ email });
-      if (walletAddress) query.$or.push({ walletAddress });
 
-      existingInvestor = await Investor.findOne(query);
+    if (walletAddress) {
+      existingInvestor = await Investor.findOne({ walletAddress });
     }
 
     if (existingInvestor) {
       res.status(409).json({
         success: false,
         message: "Investor already exists",
-        error:
-          existingInvestor.email === email
-            ? "Email already registered"
-            : "Wallet address already registered",
+        error: "Wallet address already registered",
       });
+
       return;
     }
 
@@ -197,22 +106,9 @@ export const createInvestor = async (
 
     // Create investor in MongoDB
     const newInvestor = new Investor({
-      autoFuel,
       walletAddress,
-      InternalwalletAddress,
-      vaultID,
-      issuer,
-      nationality,
-      first_name,
-      last_name,
-      address,
-      profilePicture,
-      email: email?.toLowerCase(),
-      investor,
-      loginCount: loginCount || 0,
-      accountVerified: accountVerified || false,
-      lastLoginAt,
-      createdAt: createdAt || new Date(),
+      createdAt: new Date(),
+      creationTransactionHash: transactionHash,
     });
 
     await newInvestor.save();
@@ -223,24 +119,8 @@ export const createInvestor = async (
       data: {
         investor: {
           id: newInvestor._id,
-          autoFuel: newInvestor.autoFuel,
           walletAddress: newInvestor.walletAddress,
-          InternalwalletAddress: newInvestor.InternalwalletAddress,
-          vaultID: newInvestor.vaultID,
-          issuer: newInvestor.issuer,
-          nationality: newInvestor.nationality,
-          first_name: newInvestor.first_name,
-          last_name: newInvestor.last_name,
-          address: newInvestor.address,
-          profilePicture: newInvestor.profilePicture,
-          email: newInvestor.email,
-          investor: newInvestor.investor,
-          loginCount: newInvestor.loginCount,
-          accountVerified: newInvestor.accountVerified,
-          totalAmountInvested: newInvestor.totalAmountInvested,
-          amountInvested: newInvestor.amountInvested,
-          lastLoginAt: newInvestor.lastLoginAt,
-          createdAt: newInvestor.createdAt,
+          creationTransactionHash: newInvestor.creationTransactionHash,
         },
         transactionHash,
       },
@@ -301,33 +181,23 @@ export const getAllInvestors = async (
     // Get all investors from MongoDB
     const investors = await Investor.find({});
 
+    // Mapping on all investors to return only necessary fields and calc their NFTs balance
+    const investorsWithNFTs = await Promise.all(
+      investors.map(async (investor) => {
+        const balanceNFT = await stellarService.getInvestorNFTBalance(
+          investor.walletAddress || ""
+        );
+        return {
+          walletAddress: investor.walletAddress,
+          balanceNFT,
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
       message: "Investors retrieved successfully",
-      data: {
-        investors: investors.map(investor => ({
-          id: investor._id,
-          autoFuel: investor.autoFuel,
-          walletAddress: investor.walletAddress,
-          InternalwalletAddress: investor.InternalwalletAddress,
-          vaultID: investor.vaultID,
-          issuer: investor.issuer,
-          nationality: investor.nationality,
-          first_name: investor.first_name,
-          last_name: investor.last_name,
-          address: investor.address,
-          profilePicture: investor.profilePicture,
-          email: investor.email,
-          investor: investor.investor,
-          loginCount: investor.loginCount,
-          accountVerified: investor.accountVerified,
-          totalAmountInvested: investor.totalAmountInvested,
-          amountInvested: investor.amountInvested,
-          lastLoginAt: investor.lastLoginAt,
-          createdAt: investor.createdAt,
-        })),
-        count: investors.length,
-      },
+      data: investorsWithNFTs,
     });
   } catch (error: any) {
     console.error("Error retrieving investors:", error);
@@ -485,7 +355,7 @@ export const getInvestorClaimedAmount = async (
         });
         return;
       }
-      
+
       if (!investor.walletAddress) {
         res.status(400).json({
           success: false,
@@ -493,12 +363,12 @@ export const getInvestorClaimedAmount = async (
         });
         return;
       }
-      
+
       walletAddress = investor.walletAddress;
     } else {
       // Assume it's a wallet address
       walletAddress = id;
-      
+
       // Validate the Stellar address format
       if (!stellarService.validateAddress(walletAddress)) {
         res.status(400).json({
@@ -518,11 +388,14 @@ export const getInvestorClaimedAmount = async (
     }
 
     // Get claimed amount from smart contract
-    const claimedAmount = await stellarService.getInvestorClaimedAmount(walletAddress);
+    const claimedAmount =
+      await stellarService.getInvestorClaimedAmount(walletAddress);
 
     // Format the amount (assuming 7 decimals like USDC)
     const DECIMALS = 7;
-    const claimedAmountFormatted = (Number(claimedAmount) / Math.pow(10, DECIMALS)).toString();
+    const claimedAmountFormatted = (
+      Number(claimedAmount) / Math.pow(10, DECIMALS)
+    ).toString();
 
     res.status(200).json({
       success: true,
