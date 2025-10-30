@@ -14,16 +14,16 @@ use stellar_tokens::non_fungible::{
 pub enum InvestmentStatus {
     BuyingPhase = 0,
     BeforeFirstRelease = 1,
-    SixMonthsDone = 2,
-    TenMonthsDone = 3,
-    OneYearTwoMonthsDone = 4,
-    OneYearSixMonthsDone = 5,
-    OneYearTenMonthsDone = 6,
-    TwoYearsTwoMonthsDone = 7,
-    TwoYearsSixMonthsDone = 8,
-    TwoYearsTenMonthsDone = 9,
-    ThreeYearsTwoMonthsDone = 10,
-    ThreeYearsSixMonthsDone = 11,
+    Release1 = 2,
+    Release2 = 3,
+    Release3 = 4,
+    Release4 = 5,
+    Release5 = 6,
+    Release6 = 7,
+    Release7 = 8,
+    Release8 = 9,
+    Release9 = 10,
+    Release10 = 11,
     Ended = 12,
 }
 
@@ -40,6 +40,13 @@ pub enum DataKey {
     State,
     Investor(Address),
     ClaimedAmount(Address),
+    DistributionIntervals,
+    ROIPercentages,
+    Price,
+    MinNFTsToMint,
+    MaxNFTsPerInvestor,
+    TotalSupply,
+    NFTBuyingPhaseSupply,
 }
 
 //////////////////////// EVENTS ////////////////////////////////
@@ -74,60 +81,24 @@ pub struct Minah;
 
 // Constants
 const STABLECOIN_DECIMALS: u32 = 7;
-const TOTAL_SUPPLY: u32 = 4500;
-const PRICE: i128 = 1; // TODO: change to 455 for production
 const STABLECOIN_SCALE: u32 = 10u32.pow(STABLECOIN_DECIMALS);
-// // Maximum NFTs allowed per transaction during marketplace operations (transfers)
-// const MAXIMUM_NFTS_PER_TRANSACTION: i128 = 150;
-// Maximum NFTs allowed per investor
-const MAX_NFTS_PER_INVESTOR: u32 = 150;
-// Minimum NFTs to mint at once
-const MIN_NFTS_TO_MINT: u32 = 40;
-
-// Distribution intervals in seconds
-// TODO: UNCOMMENT FOR PRODUCTION
-// const DISTRIBUTION_INTERVALS: [u64; 10] = [
-//     15_768_000,  // 6 months
-//     26_280_000,  // 10 months
-//     36_792_000,  // 1 year 2 months
-//     47_304_000,  // 1 year 6 months
-//     57_816_000,  // 1 year 10 months
-//     68_328_000,  // 2 years 2 months
-//     78_840_000,  // 2 years 6 months
-//     89_352_000,  // 2 years 10 months
-//     99_864_000,  // 3 years 2 months
-//     110_376_000, // 3 years 6 months
-// ];
-
-// TODO: COMMENT FOR PRODUCTION
-const DISTRIBUTION_INTERVALS: [u64; 10] = [
-    60,  // 1 minute
-    120, // 2 minutes
-    180, // 3 minutes
-    240, // 4 minutes
-    300, // 5 minutes
-    360, // 6 minutes
-    420, // 7 minutes
-    480, // 8 minutes
-    540, // 9 minutes
-    600, // 10 minutes
-];
-
-// ROI percentages are scaled by 10_000_000 to handle decimal percentages (7 decimal places)
-// ROI_PERCENTAGES = [4, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67, 2.67]
-const ROI_PERCENTAGES: [i128; 10] = [
-    40_000_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000, 26_700_000,
-    26_700_000, 26_700_000,
-];
 
 #[contractimpl]
 impl Minah {
+    /// There is a limitation of max 10 params by the soroban contract
+    /// Initializes the Minah contract.
     pub fn __constructor(
         e: &Env,
         owner: Address,
         stablecoin: Address,
         receiver: Address,
         payer: Address,
+        price: i128,
+        total_supply: u32,
+        min_nfts_to_mint: u32,
+        max_nfts_per_investor: u32,
+        distribution_intervals: Vec<u64>,
+        roi_percentages: Vec<i128>,
     ) {
         // Ownner should authorize this call
         owner.require_auth();
@@ -159,6 +130,32 @@ impl Minah {
         e.storage()
             .instance()
             .set(&DataKey::InvestorsArray, &empty_investors);
+
+        e.storage()
+            .instance()
+            .set(&DataKey::DistributionIntervals, &distribution_intervals);
+
+        e.storage()
+            .instance()
+            .set(&DataKey::ROIPercentages, &roi_percentages);
+
+        e.storage().instance().set(&DataKey::Price, &price);
+
+        e.storage()
+            .instance()
+            .set(&DataKey::MinNFTsToMint, &min_nfts_to_mint);
+
+        e.storage()
+            .instance()
+            .set(&DataKey::MaxNFTsPerInvestor, &max_nfts_per_investor);
+
+        e.storage()
+            .instance()
+            .set(&DataKey::TotalSupply, &total_supply);
+
+        e.storage()
+            .instance()
+            .set(&DataKey::NFTBuyingPhaseSupply, &0u32);
     }
 
     /// Sets a new stablecoin address. Only the contract owner can call this function.
@@ -214,8 +211,14 @@ impl Minah {
         // User should authorize this call
         user.require_auth();
 
+        let min_nfts_to_mint: u32 = e
+            .storage()
+            .instance()
+            .get(&DataKey::MinNFTsToMint)
+            .expect("MinNFTsToMint not set");
+
         // CHECK: Amount should be >= MIN_NFTS_TO_MINT
-        assert!(amount >= MIN_NFTS_TO_MINT, "MINIMUM_INVESTMENT_NOT_MET");
+        assert!(amount >= min_nfts_to_mint, "MINIMUM_INVESTMENT_NOT_MET");
 
         // CHECK: Current state should be BuyingPhase
         let current_state: InvestmentStatus = e
@@ -239,6 +242,12 @@ impl Minah {
         assert!(is_investor, "USER_NOT_AN_INVESTOR");
 
         // CHECK: Total supply should not be exceeded
+        let total_supply: u32 = e
+            .storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .expect("TotalSupply not set");
+
         let current_supply: u32 = e
             .storage()
             .instance()
@@ -247,17 +256,29 @@ impl Minah {
 
         let new_supply = current_supply + amount;
 
-        assert!(new_supply <= TOTAL_SUPPLY, "MAXIMUM_SUPPLY_EXCEEDED");
+        assert!(new_supply <= total_supply, "MAXIMUM_SUPPLY_EXCEEDED");
 
         // CHECK: Investor NFTS should not exceed MAX_NFTS_PER_INVESTOR
         let investor_balance = Self::balance(&e, user.clone());
 
+        let max_nfts_per_investor: u32 = e
+            .storage()
+            .instance()
+            .get(&DataKey::MaxNFTsPerInvestor)
+            .expect("MaxNFTsPerInvestor not set");
+
         assert!(
-            investor_balance + amount <= MAX_NFTS_PER_INVESTOR,
+            investor_balance + amount <= max_nfts_per_investor,
             "MAXIMUM_NFTS_PER_INVESTOR_EXCEEDED"
         );
 
-        let usd_amount = PRICE * amount as i128 * STABLECOIN_SCALE as i128;
+        let price: i128 = e
+            .storage()
+            .instance()
+            .get(&DataKey::Price)
+            .expect("Price not set");
+
+        let usd_amount = price * amount as i128 * STABLECOIN_SCALE as i128;
 
         // CHECK: User has enough balance of stablecoin
         let stablecoin_address: Address = e
@@ -334,12 +355,18 @@ impl Minah {
             .get(&DataKey::CurrentSupply)
             .expect("CurrentSupply not set");
 
-        let remaining = TOTAL_SUPPLY - current_supply;
+        let total_supply: u32 = e
+            .storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .expect("TotalSupply not set");
+
+        let remaining = total_supply - current_supply;
 
         // Update current supply to total supply
         e.storage()
             .instance()
-            .set(&DataKey::CurrentSupply, &TOTAL_SUPPLY);
+            .set(&DataKey::CurrentSupply, &total_supply);
 
         if remaining > 0 {
             // Mint the remaining amount of NFTs to the owner
@@ -371,7 +398,13 @@ impl Minah {
             total_invested_nfts += balance;
         }
 
-        total_invested_nfts * PRICE * percent / 100
+        let price: i128 = e
+            .storage()
+            .instance()
+            .get(&DataKey::Price)
+            .expect("Price not set");
+
+        total_invested_nfts * price * percent / 100
     }
 
     /// Releases the distribution for the current stage.
@@ -408,44 +441,60 @@ impl Minah {
         // SUB is safe here because of the check(countdownStart should be true)
         // We start from (state - 1) because the state enum starts from 1 for BeforeFirstRelease
         // Cast to usize cause we will use it for indexing arrays which uses usize by default in rust
-        let mut current_stage_index = ((state as u32) - 1) as usize;
+        let mut current_stage_index = (state as u32) - 1;
         let mut distributed = false;
 
+        let distribution_intervals: Vec<u64> = e
+            .storage()
+            .instance()
+            .get(&DataKey::DistributionIntervals)
+            .expect("DistributionIntervals not set");
+
+        let roi_percentages: Vec<i128> = e
+            .storage()
+            .instance()
+            .get(&DataKey::ROIPercentages)
+            .expect("ROIPercentages not set");
+
         // Loop through all stages that are ready for distribution
-        while (current_stage_index) < DISTRIBUTION_INTERVALS.len()
-            && elapsed >= DISTRIBUTION_INTERVALS[current_stage_index]
+        while (current_stage_index) < distribution_intervals.len()
+            && elapsed
+                >= distribution_intervals
+                    .get(current_stage_index)
+                    .expect("DISTRIBUTION_INTERVAL_NOT_SET")
         {
             // Distribute for this stage
-            Self::distribute(&e, ROI_PERCENTAGES[current_stage_index]);
+            Self::distribute(
+                &e,
+                roi_percentages
+                    .get(current_stage_index)
+                    .expect("ROI_PERCENTAGE_NOT_SET"),
+            );
 
             // Update state
             state = match state {
-                InvestmentStatus::BeforeFirstRelease => InvestmentStatus::SixMonthsDone,
-                InvestmentStatus::SixMonthsDone => InvestmentStatus::TenMonthsDone,
-                InvestmentStatus::TenMonthsDone => InvestmentStatus::OneYearTwoMonthsDone,
-                InvestmentStatus::OneYearTwoMonthsDone => InvestmentStatus::OneYearSixMonthsDone,
-                InvestmentStatus::OneYearSixMonthsDone => InvestmentStatus::OneYearTenMonthsDone,
-                InvestmentStatus::OneYearTenMonthsDone => InvestmentStatus::TwoYearsTwoMonthsDone,
-                InvestmentStatus::TwoYearsTwoMonthsDone => InvestmentStatus::TwoYearsSixMonthsDone,
-                InvestmentStatus::TwoYearsSixMonthsDone => InvestmentStatus::TwoYearsTenMonthsDone,
-                InvestmentStatus::TwoYearsTenMonthsDone => {
-                    InvestmentStatus::ThreeYearsTwoMonthsDone
-                }
-                InvestmentStatus::ThreeYearsTwoMonthsDone => {
-                    InvestmentStatus::ThreeYearsSixMonthsDone
-                }
-                InvestmentStatus::ThreeYearsSixMonthsDone => InvestmentStatus::Ended,
+                InvestmentStatus::BeforeFirstRelease => InvestmentStatus::Release1,
+                InvestmentStatus::Release1 => InvestmentStatus::Release2,
+                InvestmentStatus::Release2 => InvestmentStatus::Release3,
+                InvestmentStatus::Release3 => InvestmentStatus::Release4,
+                InvestmentStatus::Release4 => InvestmentStatus::Release5,
+                InvestmentStatus::Release5 => InvestmentStatus::Release6,
+                InvestmentStatus::Release6 => InvestmentStatus::Release7,
+                InvestmentStatus::Release7 => InvestmentStatus::Release8,
+                InvestmentStatus::Release8 => InvestmentStatus::Release9,
+                InvestmentStatus::Release9 => InvestmentStatus::Release10,
+                InvestmentStatus::Release10 => InvestmentStatus::Ended,
                 _ => InvestmentStatus::Ended,
             };
 
             e.storage().instance().set(&DataKey::State, &state);
 
             // SUB is safe here because of the check(countdownStart should be true)
-            current_stage_index = ((state as u32) - 1) as usize;
+            current_stage_index = (state as u32) - 1;
             distributed = true;
 
-            // This is needed to break the loop when the last distribution is done so when we get out of the loop the state will be Ended instead of ThreeYearsSixMonthsDone Cause due to the while condition it will not be able to enter the loop again so the state will not be updated to Ended
-            if state == InvestmentStatus::ThreeYearsSixMonthsDone {
+            // This is needed to break the loop when the last distribution is done so when we get out of the loop the state will be Ended instead of Release10 Cause due to the while condition it will not be able to enter the loop again so the state will not be updated to Ended
+            if state == InvestmentStatus::Release10 {
                 e.storage()
                     .instance()
                     .set(&DataKey::State, &InvestmentStatus::Ended);
@@ -541,8 +590,39 @@ impl Minah {
     }
 
     /// Get NFT PRICE
-    pub fn get_nft_price(_e: Env) -> i128 {
-        PRICE
+    pub fn get_nft_price(e: Env) -> i128 {
+        e.storage()
+            .instance()
+            .get(&DataKey::Price)
+            .expect("Price not set")
+    }
+
+    pub fn get_total_supply(e: Env) -> u32 {
+        e.storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .expect("TotalSupply not set")
+    }
+
+    pub fn get_min_nfts_to_mint(e: Env) -> u32 {
+        e.storage()
+            .instance()
+            .get(&DataKey::MinNFTsToMint)
+            .expect("MinNFTsToMint not set")
+    }
+
+    pub fn get_max_nfts_per_investor(e: Env) -> u32 {
+        e.storage()
+            .instance()
+            .get(&DataKey::MaxNFTsPerInvestor)
+            .expect("MaxNFTsPerInvestor not set")
+    }
+
+    pub fn get_nft_buying_phase_supply(e: Env) -> u32 {
+        e.storage()
+            .instance()
+            .get(&DataKey::NFTBuyingPhaseSupply)
+            .expect("NFTBuyingPhaseSupply not set")
     }
 
     //////////////////////// NFT MARKETPLACE ////////////////////////////////
@@ -611,7 +691,13 @@ impl Minah {
             .get(&DataKey::StableCoin)
             .expect("STABLECOIN_NOT_SET");
 
-        let price_per_nft = PRICE * STABLECOIN_SCALE as i128;
+        let price: i128 = e
+            .storage()
+            .instance()
+            .get(&DataKey::Price)
+            .expect("Price not set");
+
+        let price_per_nft = price * STABLECOIN_SCALE as i128;
         let total_price = nft_amount * price_per_nft;
 
         let stablecoin_client = token::Client::new(&e, &stablecoin_address);
@@ -710,7 +796,13 @@ impl Minah {
 
         let stablecoin_client = token::Client::new(&e, &stablecoin_address);
 
-        let price_per_nft = PRICE * STABLECOIN_SCALE as i128;
+        let price: i128 = e
+            .storage()
+            .instance()
+            .get(&DataKey::Price)
+            .expect("Price not set");
+
+        let price_per_nft = price * STABLECOIN_SCALE as i128;
         let total_price = nft_amount * price_per_nft;
 
         let to_balance = stablecoin_client.balance(&to);
@@ -803,9 +895,15 @@ impl Minah {
 
         let current_address = e.current_contract_address();
 
+        let price: i128 = e
+            .storage()
+            .instance()
+            .get(&DataKey::Price)
+            .expect("Price not set");
+
         for investor in investors.iter() {
             let balance = Base::balance(&e, &investor) as i128;
-            let investor_amount = ((balance * percent) / 100) * PRICE;
+            let investor_amount = ((balance * percent) / 100) * price;
 
             // Update claimed amount for the investor
             let mut claimed: i128 = e
