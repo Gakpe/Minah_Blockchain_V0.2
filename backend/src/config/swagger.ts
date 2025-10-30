@@ -44,6 +44,10 @@ const swaggerDefinition = {
       name: "Chronometer",
       description: "Chronometer management endpoints",
     },
+    {
+      name: "Contract Info",
+      description: "Read-only endpoints exposing on-chain Minah contract data",
+    },
   ],
   components: {
     schemas: {

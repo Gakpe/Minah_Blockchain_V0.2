@@ -818,6 +818,181 @@ class StellarService {
       return false;
     }
   }
+
+  /**
+   * Get the stablecoin contract address used by Minah
+   */
+  async getStablecoinAddress(): Promise<string> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_stablecoin();
+
+      return result;
+    } catch (error) {
+      console.error("Error calling get_stablecoin on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the receiver address configured in the contract
+   */
+  async getReceiverAddress(): Promise<string> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_receiver();
+      return result;
+    } catch (error) {
+      console.error("Error calling get_receiver on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get NFT price (denominated in USDC whole units)
+   */
+  async getNFTPrice(): Promise<bigint> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_nft_price();
+      return result;
+    } catch (error) {
+      console.error("Error calling get_nft_price on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /** Get total NFT supply cap */
+  async getTotalSupply(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_total_supply();
+      return result;
+    } catch (error) {
+      console.error("Error calling get_total_supply on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /** Get minimum NFTs to mint per transaction */
+  async getMinNftsToMint(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_min_nfts_to_mint();
+      return result;
+    } catch (error) {
+      console.error("Error calling get_min_nfts_to_mint on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /** Get maximum NFTs an investor can hold */
+  async getMaxNftsPerInvestor(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_max_nfts_per_investor();
+      return result;
+    } catch (error) {
+      console.error(
+        "Error calling get_max_nfts_per_investor on Stellar:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /** Get NFTs minted during the buying phase */
+  async getNftBuyingPhaseSupply(): Promise<number> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_nft_buying_phase_supply();
+      return result;
+    } catch (error) {
+      console.error(
+        "Error calling get_nft_buying_phase_supply on Stellar:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /** Get ROI percentages for each release stage */
+  async getRoiPercentages(): Promise<bigint[]> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.get_roi_percentages();
+      return result;
+    } catch (error) {
+      console.error("Error calling get_roi_percentages on Stellar:", error);
+      throw error;
+    }
+  }
+
+  /** Check if an address is an on-chain investor */
+  async isInvestor(address: string): Promise<boolean> {
+    try {
+      const contract = new MinahClient.Client({
+        ...(this.network === "testnet"
+          ? MinahClient.networks.testnet
+          : MinahClient.networks.mainnet),
+        rpcUrl: CONFIG.stellar.rpcUrl,
+      });
+
+      const { result } = await contract.is_investor({ investor: address });
+      return result;
+    } catch (error) {
+      console.error("Error calling is_investor on Stellar:", error);
+      throw error;
+    }
+  }
 }
 
 export const stellarService = new StellarService();
