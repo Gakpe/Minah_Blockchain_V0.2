@@ -158,14 +158,7 @@ export const createInvestor = async (
  *                   example: "Investors retrieved successfully"
  *                 data:
  *                   type: object
- *                   properties:
- *                     investors:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Investor'
- *                     count:
- *                       type: number
- *                       example: 10
+ *
  *       500:
  *         description: Internal server error
  *         content:
@@ -189,6 +182,8 @@ export const getAllInvestors = async (
         );
         return {
           walletAddress: investor.walletAddress,
+          creationTransactionHash: investor.creationTransactionHash,
+          createdAt: investor.createdAt,
           balanceNFT,
         };
       })
