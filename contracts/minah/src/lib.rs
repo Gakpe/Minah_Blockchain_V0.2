@@ -103,6 +103,18 @@ impl Minah {
         // Ownner should authorize this call
         owner.require_auth();
 
+        // ROI percentages length should be 10 because we have 10 release stages
+        assert_eq!(
+            roi_percentages.len(),
+            10,
+            "ROI_PERCENTAGES_LENGTH_MUST_BE_10"
+        );
+        assert_eq!(
+            distribution_intervals.len(),
+            10,
+            "DISTRIBUTION_INTERVALS_LENGTH_MUST_BE_10"
+        );
+
         let uri = String::from_str(e, "");
         let name = String::from_str(e, "Minah");
         let symbol = String::from_str(e, "MNH");
