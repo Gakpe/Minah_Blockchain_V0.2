@@ -485,3 +485,311 @@ fn test_calculate_amount_to_release_no_investors() {
 
     assert_eq!(amount, 0);
 }
+
+#[test]
+fn test_multiple_distributions_across_all_stages() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    // Fund payer with enough stablecoin for all distributions
+    let payer_funding = 10_000_000 * 10i128.pow(6);
+    stablecoin_client.transfer(&owner, &payer, &payer_funding);
+
+    let investor = Address::generate(&env);
+    let nft_amount = 100u32;
+
+    // Mint NFTs
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        nft_amount,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer
+    client.start_chronometer();
+    let start_time = env.ledger().timestamp();
+
+    // Process all 10 distribution stages
+    for stage in 0..10 {
+        // Advance time to the distribution interval
+        let new_timestamp = start_time + DISTRIBUTION_INTERVALS[stage];
+        env.ledger().set_timestamp(new_timestamp);
+
+        // Calculate and approve amount for this stage
+        let percent = ROI_PERCENTAGES[stage];
+        let amount_to_release = client.calculate_amount_to_release(&percent);
+
+        stablecoin_client.approve(&payer, &contract_id, &amount_to_release, &100);
+
+        // Release distribution
+        client.release_distribution();
+
+        // Verify state progression
+        let expected_state = match stage {
+            0 => crate::InvestmentStatus::Release1,
+            1 => crate::InvestmentStatus::Release2,
+            2 => crate::InvestmentStatus::Release3,
+            3 => crate::InvestmentStatus::Release4,
+            4 => crate::InvestmentStatus::Release5,
+            5 => crate::InvestmentStatus::Release6,
+            6 => crate::InvestmentStatus::Release7,
+            7 => crate::InvestmentStatus::Release8,
+            8 => crate::InvestmentStatus::Release9,
+            9 => crate::InvestmentStatus::Ended,
+            _ => panic!("Invalid stage"),
+        };
+
+        let current_state = client.get_current_state();
+        assert_eq!(current_state, expected_state);
+    }
+
+    // Verify final state is Ended
+    assert_eq!(client.get_current_state(), crate::InvestmentStatus::Ended);
+}
+
+#[test]
+fn test_distribution_with_multiple_investors_different_balances() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    // Fund payer with enough stablecoin
+    let payer_funding = 10_000_000 * 10i128.pow(6);
+    stablecoin_client.transfer(&owner, &payer, &payer_funding);
+
+    // Create 3 investors with different NFT amounts
+    let investor1 = Address::generate(&env);
+    let investor2 = Address::generate(&env);
+    let investor3 = Address::generate(&env);
+
+    let nft_amount_1 = 100u32;
+    let nft_amount_2 = 50u32;
+    let nft_amount_3 = 25u32;
+
+    mint_nft(
+        &env,
+        &client,
+        &investor1,
+        nft_amount_1,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    mint_nft(
+        &env,
+        &client,
+        &investor2,
+        nft_amount_2,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    mint_nft(
+        &env,
+        &client,
+        &investor3,
+        nft_amount_3,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer
+    client.start_chronometer();
+    let start_time = env.ledger().timestamp();
+
+    // Advance to first distribution
+    env.ledger().set_timestamp(start_time + DISTRIBUTION_INTERVALS[0]);
+
+    let percent_0 = ROI_PERCENTAGES[0];
+    let amount_to_release = client.calculate_amount_to_release(&percent_0);
+
+    stablecoin_client.approve(&payer, &contract_id, &amount_to_release, &100);
+
+    // Release first distribution
+    client.release_distribution();
+
+    // Calculate expected amounts for each investor
+    let price = client.get_nft_price();
+    let expected_investor1 = (nft_amount_1 as i128 * price * percent_0) / 100;
+    let expected_investor2 = (nft_amount_2 as i128 * price * percent_0) / 100;
+    let expected_investor3 = (nft_amount_3 as i128 * price * percent_0) / 100;
+
+    // Verify claimed amounts
+    assert_eq!(client.see_claimed_amount(&investor1), expected_investor1);
+    assert_eq!(client.see_claimed_amount(&investor2), expected_investor2);
+    assert_eq!(client.see_claimed_amount(&investor3), expected_investor3);
+}
+
+#[test]
+#[should_panic(expected = "DISTRIBUTION_NOT_READY_YET")]
+fn test_cannot_release_same_stage_twice() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    // Fund payer with enough stablecoin
+    let payer_funding = 10_000_000 * 10i128.pow(6);
+    stablecoin_client.transfer(&owner, &payer, &payer_funding);
+
+    let investor = Address::generate(&env);
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        100,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    client.start_chronometer();
+    let start_time = env.ledger().timestamp();
+
+    // Advance to first distribution
+    env.ledger().set_timestamp(start_time + DISTRIBUTION_INTERVALS[0]);
+
+    let percent_0 = ROI_PERCENTAGES[0];
+    let amount_to_release = client.calculate_amount_to_release(&percent_0);
+    let double_amount = amount_to_release * 2;
+
+    stablecoin_client.approve(&payer, &contract_id, &double_amount, &100);
+
+    // Release first distribution
+    client.release_distribution();
+
+    // Try to release again without advancing time - should panic
+    client.release_distribution();
+}
+
+#[test]
+fn test_skip_multiple_stages_at_once() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(6));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    // Fund payer with enough stablecoin
+    let payer_funding = 10_000_000 * 10i128.pow(6);
+    stablecoin_client.transfer(&owner, &payer, &payer_funding);
+
+    let investor = Address::generate(&env);
+    let nft_amount = 100u32;
+
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        nft_amount,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    client.start_chronometer();
+    let start_time = env.ledger().timestamp();
+
+    // Skip directly to stage 3 (index 2)
+    env.ledger().set_timestamp(start_time + DISTRIBUTION_INTERVALS[2]);
+
+    // Calculate total amount for stages 0, 1, and 2
+    let mut total_amount = 0i128;
+    for i in 0..3 {
+        let percent = ROI_PERCENTAGES[i];
+        total_amount += client.calculate_amount_to_release(&percent);
+    }
+
+    stablecoin_client.approve(&payer, &contract_id, &total_amount, &100);
+
+    // Release should process all 3 stages at once
+    client.release_distribution();
+
+    // Verify we're now at Release3 state
+    assert_eq!(client.get_current_state(), crate::InvestmentStatus::Release3);
+
+    // Verify claimed amount is sum of all 3 stages
+    let price = client.get_nft_price();
+    let mut expected_claimed = 0i128;
+    for i in 0..3 {
+        expected_claimed += (nft_amount as i128 * price * ROI_PERCENTAGES[i]) / 100;
+    }
+    assert_eq!(client.see_claimed_amount(&investor), expected_claimed);
+}
