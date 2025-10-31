@@ -384,3 +384,398 @@ fn test_buy_tokens_without_from_approval_should_panic() {
     // Attempt buy should panic when batch transfer checks for approval for all
     client.buy_tokens(&investor1, &investor2, &tokens_to_buy_from_investor1);
 }
+
+#[test]
+#[should_panic(expected = "FROM_ADDRESS_NOT_INVESTOR_OR_OWNER")]
+fn test_buy_tokens_from_not_investor_nor_owner() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    // Setup one investor who owns NFTs
+    let investor = Address::generate(&env);
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        20,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer to enable marketplace
+    client.start_chronometer();
+
+    // Normal (non investor) user tries to sell their non-existing NFTs to investor -> should fail on FROM validation
+    let normal_user = Address::generate(&env);
+
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+
+    client.buy_tokens(&normal_user, &investor, &token_ids);
+}
+
+#[test]
+#[should_panic(expected = "TO_ADDRESS_NOT_INVESTOR_OR_OWNER")]
+fn test_buy_tokens_to_not_investor_nor_owner() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    // Setup investor who owns NFTs
+    let seller = Address::generate(&env);
+    mint_nft(
+        &env,
+        &client,
+        &seller,
+        20,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    client.start_chronometer();
+
+    // Buyer is not investor nor owner
+    let non_investor_buyer = Address::generate(&env);
+
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+
+    // Attempt to buy should panic with TO_ADDRESS_NOT_INVESTOR_OR_OWNER
+    client.buy_tokens(&seller, &non_investor_buyer, &token_ids);
+}
+
+#[test]
+#[should_panic(expected = "INSUFFICIENT_BALANCE_TO_BUY_NFTS")]
+fn test_buy_tokens_insufficient_balance() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    let seller = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    // Create buyer as investor
+    client.create_investor(&buyer);
+
+    // Mint to seller and start chronometer
+    mint_nft(
+        &env,
+        &client,
+        &seller,
+        10,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+    client.start_chronometer();
+
+    // Prepare token ids to buy; do NOT fund buyer with stablecoin
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+
+    // Approve for all for seller so we reach the balance check for buyer
+    client.approve_for_all(&seller, &contract_id, &100);
+
+    // Attempt to buy should panic due to insufficient stablecoin balance
+    client.buy_tokens(&seller, &buyer, &token_ids);
+}
+
+#[test]
+#[should_panic(expected = "INSUFFICIENT_ALLOWANCE_TO_BUY_NFTS")]
+fn test_buy_tokens_insufficient_allowance() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    let seller = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    // Create buyer as investor
+    client.create_investor(&buyer);
+
+    // Mint to seller and start chronometer
+    mint_nft(
+        &env,
+        &client,
+        &seller,
+        10,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+    client.start_chronometer();
+
+    // Fund buyer with just enough but set insufficient allowance
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+    let total_price_in_stablecoin: i128 = 5 * PRICE * 10i128.pow(USDC_DECIMALS);
+    stablecoin_client.transfer(&owner, &buyer, &total_price_in_stablecoin);
+
+    // Approve less than required
+    let insufficient_allowance = total_price_in_stablecoin - 1;
+    stablecoin_client.approve(&buyer, &contract_id, &insufficient_allowance, &100);
+
+    // Seller approves NFTs for transfer
+    client.approve_for_all(&seller, &contract_id, &100);
+
+    // Attempt to buy should panic due to insufficient allowance
+    client.buy_tokens(&seller, &buyer, &token_ids);
+}
+
+#[test]
+#[should_panic(expected = "TO_ADDRESS_NOT_INVESTOR_OR_OWNER")]
+fn test_sell_tokens_to_not_investor_nor_owner() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    let seller = Address::generate(&env);
+    let buyer = Address::generate(&env); // Will be non-investor
+
+    // Mint to seller and start chronometer
+    mint_nft(
+        &env,
+        &client,
+        &seller,
+        10,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+    client.start_chronometer();
+
+    // Fund buyer and approve so checks go through to TO validation
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+    let total_price_in_stablecoin: i128 = 5 * PRICE * 10i128.pow(USDC_DECIMALS);
+    stablecoin_client.transfer(&owner, &buyer, &total_price_in_stablecoin);
+    stablecoin_client.approve(&buyer, &contract_id, &total_price_in_stablecoin, &100);
+
+    // NOTE: Do not create buyer as investor
+
+    // Seller approves NFTs for transfer
+    client.approve_for_all(&seller, &contract_id, &100);
+
+    // Attempt to sell should panic due to TO not investor nor owner
+    client.sell_tokens(&seller, &buyer, &token_ids);
+}
+
+#[test]
+#[should_panic(expected = "INSUFFICIENT_BALANCE_TO_SELL_NFTS")]
+fn test_sell_tokens_insufficient_balance() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let seller = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    // Create buyer as investor
+    client.create_investor(&buyer);
+
+    // Mint to seller and start chronometer
+    mint_nft(
+        &env,
+        &client,
+        &seller,
+        10,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+    client.start_chronometer();
+
+    // Not funding buyer with stablecoin should trigger balance panic
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+
+    // Seller approves NFTs for transfer
+    client.approve_for_all(&seller, &contract_id, &100);
+
+    client.sell_tokens(&seller, &buyer, &token_ids);
+}
+
+#[test]
+#[should_panic(expected = "INSUFFICIENT_ALLOWANCE_TO_SELL_NFTS")]
+fn test_sell_tokens_insufficient_allowance() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(USDC_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let stablecoin_client = stablecoin::StablecoinClient::new(&env, &stablecoin_address);
+
+    let seller = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    // Create buyer as investor
+    client.create_investor(&buyer);
+
+    // Mint to seller and start chronometer
+    mint_nft(
+        &env,
+        &client,
+        &seller,
+        10,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+    client.start_chronometer();
+
+    let mut token_ids: Vec<u32> = Vec::new(&env);
+    for i in 0..5 {
+        token_ids.push_back(i);
+    }
+    let total_price_in_stablecoin: i128 = 5 * PRICE * 10i128.pow(USDC_DECIMALS);
+    stablecoin_client.transfer(&owner, &buyer, &total_price_in_stablecoin);
+
+    // Approve less than required for buyer
+    let insufficient_allowance = total_price_in_stablecoin - 1;
+    stablecoin_client.approve(&buyer, &contract_id, &insufficient_allowance, &100);
+
+    // Seller approves NFTs for transfer
+    client.approve_for_all(&seller, &contract_id, &100);
+
+    // Attempt to sell should panic due to insufficient allowance
+    client.sell_tokens(&seller, &buyer, &token_ids);
+}
