@@ -647,3 +647,52 @@ fn test_double_chronometer_start() {
     // Try to start again - should panic
     client.start_chronometer();
 }
+
+#[test]
+fn test_buying_phase_supply_snapshot_on_start() {
+    let env = Env::default();
+    let owner = Address::generate(&env);
+    let stablecoin_address =
+        deploy_stablecoin_contract(&env, &owner, 100_000_000 * 10i128.pow(STABLECOIN_DECIMALS));
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    // Mint a specific amount during buying phase
+    let investor = Address::generate(&env);
+    let minted_before_start = 123u32;
+    mint_nft(
+        &env,
+        &client,
+        &investor,
+        minted_before_start,
+        &owner,
+        &stablecoin_address,
+        &contract_id,
+    );
+
+    // Start chronometer, which should snapshot buying phase supply
+    client.start_chronometer();
+
+    // Verify snapshot equals minted_before_start
+    let snapshot = client.get_buying_phase_nft_supply();
+    assert_eq!(snapshot, minted_before_start);
+
+    // Any subsequent mints are disallowed, but owner receives remaining supply.
+    // Ensure getter remains unchanged after start.
+    let snapshot_after = client.get_buying_phase_nft_supply();
+    assert_eq!(snapshot_after, minted_before_start);
+}
