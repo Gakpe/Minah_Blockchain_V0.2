@@ -243,3 +243,177 @@ fn test_deploy_mock_stablecoin() {
     assert_eq!(symbol, expected_symbol);
     assert_eq!(decimals, expected_decimals);
 }
+
+#[test]
+#[should_panic(expected = "ROI_PERCENTAGES_LENGTH_MUST_BE_10")]
+fn test_initialization_with_invalid_roi_percentages_length() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+
+    // Create ROI percentages with wrong length (9 instead of 10)
+    let mut invalid_roi_percentages = roi_percentages_vec(&env);
+    invalid_roi_percentages.pop_back();
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        invalid_roi_percentages,
+    );
+}
+
+#[test]
+#[should_panic(expected = "DISTRIBUTION_INTERVALS_LENGTH_MUST_BE_10")]
+fn test_initialization_with_invalid_distribution_intervals_length() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+
+    // Create distribution intervals with wrong length (11 instead of 10)
+    let mut invalid_intervals = distribution_intervals_vec(&env);
+    invalid_intervals.push_back(700);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        invalid_intervals,
+        roi_percentages_vec(&env),
+    );
+}
+
+#[test]
+fn test_initial_state_is_buying_phase() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    let state = client.get_current_state();
+    assert_eq!(state, crate::InvestmentStatus::BuyingPhase);
+}
+
+#[test]
+fn test_initial_supply_is_zero() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    assert_eq!(client.get_current_supply(), 0);
+    assert_eq!(client.get_nft_buying_phase_supply(), 0);
+}
+
+#[test]
+fn test_chronometer_not_started_initially() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    assert!(!client.is_chronometer_started());
+    assert_eq!(client.get_begin_date(), 0);
+}
+
+#[test]
+fn test_multiple_investors_creation() {
+    let env = Env::default();
+    let receiver = Address::generate(&env);
+    let payer = Address::generate(&env);
+    let owner = Address::generate(&env);
+    let stablecoin_address = deploy_stablecoin_contract(&env, &owner, 1000000);
+
+    let (client, contract_id) = create_client(
+        &env,
+        &owner,
+        &stablecoin_address,
+        &receiver,
+        &payer,
+        PRICE,
+        TOTAL_SUPPLY,
+        MIN_NFTS_TO_MINT,
+        MAX_NFTS_PER_INVESTOR,
+        distribution_intervals_vec(&env),
+        roi_percentages_vec(&env),
+    );
+
+    // Create multiple investors
+    let investor1 = Address::generate(&env);
+    let investor2 = Address::generate(&env);
+    let investor3 = Address::generate(&env);
+
+    client.create_investor(&investor1);
+    client.create_investor(&investor2);
+    client.create_investor(&investor3);
+
+    // Verify all are investors
+    assert!(client.is_investor(&investor1));
+    assert!(client.is_investor(&investor2));
+    assert!(client.is_investor(&investor3));
+
+    // Verify array length
+    assert_eq!(client.get_investors_array_length(), 3);
+}
