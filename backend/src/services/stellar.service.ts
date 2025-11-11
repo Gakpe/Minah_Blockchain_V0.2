@@ -7,6 +7,7 @@ import {
   Networks,
   rpc as StellarRpc,
   nativeToScVal,
+  Horizon,
 } from "@stellar/stellar-sdk";
 import { CONFIG } from "../config";
 import * as MinahClient from "../config/minah";
@@ -14,6 +15,7 @@ import { parseUnits } from "viem";
 
 class StellarService {
   private server: StellarRpc.Server;
+  private horizonServer: Horizon.Server;
   private network: string;
   private contractId: string;
   private ownerKeypair: Keypair;
@@ -21,6 +23,7 @@ class StellarService {
   constructor() {
     this.network = CONFIG.stellar.network;
     this.server = new StellarRpc.Server(CONFIG.stellar.rpcUrl);
+    this.horizonServer = new Horizon.Server(CONFIG.stellar.horizonUrl);
 
     this.contractId = CONFIG.stellar.contractId;
 
@@ -474,12 +477,17 @@ class StellarService {
         CONFIG.stellar.usdc.asset_issuer
       );
 
+      // Get trustline
       const entry = await this.server.getTrustline(
         mintAccount.accountId(),
         asset
       );
 
-      let usdcBalance = BigInt(entry?.balance().toString()) || 0n;
+      if (!entry) {
+        throw new Error(`No trustline found for USDC on mint account`);
+      }
+
+      let usdcBalance = BigInt(entry.balance().toString()) || 0n;
 
       console.log(`USDC Balance: ${usdcBalance}`);
 
@@ -595,6 +603,48 @@ class StellarService {
     } catch (error) {
       console.error("Minting failed");
       console.error(JSON.stringify(error));
+      throw error;
+    }
+  }
+
+  async changeTrustline(secretKey: string): Promise<void> {
+    console.log("Start Changing trustline...");
+    try {
+      const accountKeypair = Keypair.fromSecret(secretKey);
+
+      const asset = new MinahClient.Asset(
+        CONFIG.stellar.usdc.asset_code,
+        CONFIG.stellar.usdc.asset_issuer
+      );
+      const account = await this.server.getAccount(accountKeypair.publicKey());
+      const tx = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase:
+          this.network === "testnet" ? Networks.TESTNET : Networks.PUBLIC,
+      })
+        .addOperation(
+          MinahClient.Operation.changeTrust({
+            asset: asset,
+            source: accountKeypair.publicKey(),
+          })
+        )
+        .setTimeout(30)
+        .build();
+
+      tx.sign(accountKeypair);
+
+      const response = await this.horizonServer.submitTransaction(tx);
+
+      console.log(`Change Trustline transaction Hash: ${response.hash}`);
+      console.log(
+        `Change Trustline transaction result: ${response.successful}`
+      );
+
+      if (!response.successful) {
+        throw new Error("Change trustline transaction failed");
+      }
+    } catch (error) {
+      console.error("Error changing trustline:", error);
       throw error;
     }
   }
