@@ -287,10 +287,74 @@ The backend integrates with the Minah smart contract deployed on Stellar (Soroba
 - `npm run build` — Build TypeScript to `dist/`
 - `npm start` — Build and start production server
 - `npm run mint` — Mint NFTs using `src/mint.ts` (uses STELLAR*MINT*\* keys)
+- `npm run trustline` — Add USDC trustline using `src/trustline.ts` (uses STELLAR*OWNER*\* or STELLAR*MINT*\* keys)
 - `npm run lint` — ESLint
 - `npm run format` — Prettier
 
-Optional: `./setup.sh` provides a quick start (copies `.env`, installs deps, builds).
+### Mint Script
+
+The mint script (`src/mint.ts`) allows you to mint NFTs to a specified address. It performs the following operations:
+
+1. Validates the user address
+2. Gets the NFT price from the contract
+3. Checks the mint account's USDC balance
+4. Approves the contract to spend USDC
+5. Mints the NFT
+
+**Usage:**
+
+```bash
+npm run mint <amount>
+```
+
+**Example:**
+
+```bash
+npm run mint 5
+```
+
+This will mint 5 NFTs to the address specified by `STELLAR_MINT_PUBLIC_KEY` in your `.env` file.
+
+**Requirements:**
+
+- The mint account must have sufficient USDC balance
+- The mint account must have a USDC trustline established
+- The contract must be in the NFT buying phase
+- The amount must be within the allowed limits (min/max NFTs per transaction)
+
+### Trustline Script
+
+The trustline script (`src/trustline.ts`) adds a trustline for the USDC asset to a specified account. This is required before an account can hold or receive USDC tokens.
+
+**Usage:**
+
+```bash
+npm run trustline <owner | minter>
+```
+
+**Examples:**
+
+```bash
+# Add trustline for the owner account
+npm run trustline owner
+
+# Add trustline for the minter account
+npm run trustline minter
+```
+
+**What it does:**
+
+1. Validates the account address based on the specified role
+2. Adds the USDC trustline to the account using the account's secret key
+
+**Requirements:**
+
+- The account must have sufficient XLM balance for transaction fees
+- Valid secret key must be configured in `.env` for the specified role:
+  - `owner` role uses `STELLAR_OWNER_SECRET_KEY`
+  - `minter` role uses `STELLAR_MINT_SECRET_KEY`
+
+**Note:** You typically need to run this script once per account before that account can interact with USDC tokens (e.g., before minting NFTs or receiving distributions).
 
 ## Error Handling
 
