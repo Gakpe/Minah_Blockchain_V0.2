@@ -106,6 +106,7 @@ BuyingPhase → BeforeFirstRelease → Release1 → Release2 → Release3 → Re
 - `calculate_amount_to_release(percent)` — Calculate total distribution for given percentage (percent scaled by 10,000,000)
 
 Marketplace helpers (post-buying phase):
+
 - `buy_tokens(from, to, token_ids[])` — Buyer pays USDC, NFTs move from seller to buyer
 - `sell_tokens(from, to, token_ids[])` — Seller receives USDC, NFTs move from seller to buyer
 
@@ -169,15 +170,11 @@ cd stellar-minah
 
 ```bash
 # Generate owner account
-stellar keys generate owner --network testnet
+stellar keys generate owner --network testnet --fund
 
 # Generate investor accounts for testing
-stellar keys generate investor1 --network testnet
-stellar keys generate investor2 --network testnet
-
-# Fund accounts from friendbot
-stellar keys fund owner --network testnet
-stellar keys fund investor1 --network testnet
+stellar keys generate investor1 --network testnet --fund
+stellar keys generate investor2 --network testnet --fund
 ```
 
 ## 🔨 Building Contracts
@@ -245,6 +242,7 @@ stellar contract deploy \
 ```
 
 Notes:
+
 - `roi-percentages` are scaled by 10,000,000 (e.g., 4% = "40000000").
 - `distribution-intervals` must have 10 elements (seconds) and map 1:1 to the 10 release stages.
 
