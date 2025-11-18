@@ -5,6 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "mint": "ts-node src/mint.ts",
+    "trustline": "ts-node src/trustline.ts",
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "tsc && node dist/server.js",

@@ -18,6 +18,8 @@ export const CONFIG = {
     network: process.env.STELLAR_NETWORK || "testnet",
     rpcUrl:
       process.env.STELLAR_RPC_URL || "https://soroban-testnet.stellar.org:443",
+    horizonUrl:
+      process.env.STELLAR_HORIZON_URL || "https://horizon-testnet.stellar.org",
     contractId: process.env.MINAH_CONTRACT_ID || "",
     ownerSecretKey: process.env.STELLAR_OWNER_SECRET_KEY || "",
     ownerPublicKey: process.env.STELLAR_OWNER_PUBLIC_KEY || "",
